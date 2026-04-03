@@ -1,0 +1,36 @@
+proxmox_endpoint = "https://pve.example.internal:8006/"
+proxmox_insecure = true
+
+target_node_name = "pve1"
+
+vm_name               = "monitoring-01"
+vm_clone_source_vm_id = 9000
+vm_datastore_id       = "local-lvm"
+vm_bridge             = "vmbr0"
+vm_cpu_cores          = 2
+vm_memory_mb          = 4096
+vm_disk_size_gb       = 32
+vm_full_clone         = true
+vm_network_model      = "virtio"
+vm_vlan_tag           = 20
+
+lxc_vm_id                  = 201
+lxc_hostname               = "utility-01"
+lxc_template_file_id       = "local:vztmpl/alpine-3.20-default_20240606_amd64.tar.xz"
+lxc_datastore_id           = "local-lvm"
+lxc_bridge                 = "vmbr0"
+lxc_cpu_cores              = 1
+lxc_memory_mb              = 512
+lxc_swap_mb                = 512
+lxc_disk_size_gb           = 8
+lxc_network_interface_name = "eth0"
+lxc_ipv4_address           = "dhcp"
+lxc_started                = true
+lxc_start_on_boot          = true
+lxc_unprivileged           = true
+lxc_description            = "Phase 1 scaffold example container"
+lxc_tags                   = ["phase-1", "scaffold"]
+lxc_os_type                = "unmanaged"
+
+# Export credentials instead of committing them:
+#   export PROXMOX_VE_API_TOKEN="set-this-in-your-shell"
