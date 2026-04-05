@@ -1,0 +1,12 @@
+---
+- name: Apply baseline role to Debian hosts
+  hosts: debian
+  become: true
+  roles:
+    - role: baseline
+
+- name: Apply Docker role to Docker hosts
+  hosts: docker_hosts
+  become: true
+  roles:
+    - role: docker

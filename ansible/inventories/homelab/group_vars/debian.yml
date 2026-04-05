@@ -1,0 +1,7 @@
+---
+# Debian 12 host defaults for the baseline role.
+ansible_python_interpreter: /usr/bin/python3
+baseline_packages:
+  - qemu-guest-agent
+baseline_enabled_services:
+  - qemu-guest-agent

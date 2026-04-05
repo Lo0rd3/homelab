@@ -1,0 +1,6 @@
+---
+- name: Apply baseline bootstrap to Debian hosts
+  hosts: debian
+  become: true
+  roles:
+    - role: baseline

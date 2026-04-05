@@ -101,3 +101,58 @@ variable "network_vlan_tag" {
     error_message = "network_vlan_tag must be null or greater than 0."
   }
 }
+
+variable "cloud_init_datastore_id" {
+  description = "Datastore used for the VM cloud-init drive."
+  type        = string
+
+  validation {
+    condition     = length(trimspace(var.cloud_init_datastore_id)) > 0
+    error_message = "cloud_init_datastore_id must not be empty."
+  }
+}
+
+variable "user_name" {
+  description = "Username configured through cloud-init for the cloned VM."
+  type        = string
+  default     = "debian"
+
+  validation {
+    condition     = length(trimspace(var.user_name)) > 0
+    error_message = "user_name must not be empty."
+  }
+}
+
+variable "ssh_public_keys" {
+  description = "SSH public keys configured through cloud-init for the cloned VM user."
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition     = alltrue([for key in var.ssh_public_keys : length(trimspace(key)) > 0])
+    error_message = "ssh_public_keys entries must not be empty."
+  }
+}
+
+variable "ipv4_address" {
+  description = "IPv4 address in cloud-init format, or dhcp for automatic assignment."
+  type        = string
+  default     = "dhcp"
+
+  validation {
+    condition     = var.ipv4_address == "dhcp" || can(regex(".+/.+", var.ipv4_address))
+    error_message = "ipv4_address must be dhcp or a CIDR-style IPv4 address like 192.168.1.50/24."
+  }
+}
+
+variable "ipv4_gateway" {
+  description = "Optional IPv4 gateway for static addressing. Leave null when using dhcp."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition     = var.ipv4_address == "dhcp" ? var.ipv4_gateway == null : true
+    error_message = "ipv4_gateway must be null when ipv4_address is dhcp."
+  }
+}

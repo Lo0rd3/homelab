@@ -1,0 +1,4 @@
+.ansible/
+.vault_pass*
+*.vault-pass
+vault-password*

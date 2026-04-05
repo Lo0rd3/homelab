@@ -1,0 +1,24 @@
+---
+- name: Validate baseline role inputs
+  ansible.builtin.assert:
+    that:
+      - baseline_packages is sequence
+      - baseline_packages is not string
+      - baseline_enabled_services is sequence
+      - baseline_enabled_services is not string
+      - baseline_handler_service_name is string
+    fail_msg: Baseline role variables must use the expected list/string types.
+
+- name: Ensure baseline packages are present
+  ansible.builtin.package:
+    name: "{{ baseline_packages }}"
+    state: present
+  when: baseline_packages | length > 0
+
+- name: Ensure baseline services are enabled and running
+  ansible.builtin.service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop: "{{ baseline_enabled_services }}"
+  when: baseline_enabled_services | length > 0

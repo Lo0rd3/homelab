@@ -1,0 +1,8 @@
+---
+# Safe Docker host defaults shared by homelab Docker workloads.
+docker_users: []
+docker_compose_base_dir: /opt/compose
+docker_daemon_log_driver: json-file
+docker_daemon_log_opts:
+  max-size: "10m"
+  max-file: "3"

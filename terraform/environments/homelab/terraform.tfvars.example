@@ -13,6 +13,13 @@ vm_disk_size_gb       = 32
 vm_full_clone         = true
 vm_network_model      = "virtio"
 vm_vlan_tag           = 20
+vm_cloud_init_datastore_id = "local"
+vm_user               = "debian"
+vm_ssh_public_keys    = [
+  "ssh-ed25519 replace-me"
+]
+vm_ipv4_address       = "dhcp"
+vm_ipv4_gateway       = null
 
 lxc_vm_id                  = 201
 lxc_hostname               = "utility-01"

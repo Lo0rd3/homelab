@@ -1,0 +1,4 @@
+---
+# Shared non-secret defaults for the single homelab inventory.
+homelab_environment: homelab
+homelab_timezone: UTC

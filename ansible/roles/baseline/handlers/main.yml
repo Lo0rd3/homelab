@@ -1,0 +1,6 @@
+---
+- name: Restart baseline managed service
+  ansible.builtin.service:
+    name: "{{ baseline_handler_service_name }}"
+    state: restarted
+  when: baseline_handler_service_name | length > 0

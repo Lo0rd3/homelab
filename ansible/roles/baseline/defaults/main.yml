@@ -1,0 +1,5 @@
+---
+# Safe, overridable defaults for shared host setup.
+baseline_packages: []
+baseline_enabled_services: []
+baseline_handler_service_name: ""

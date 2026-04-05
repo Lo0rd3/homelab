@@ -112,6 +112,62 @@ variable "vm_vlan_tag" {
   nullable    = true
 }
 
+variable "vm_cloud_init_datastore_id" {
+  description = "Datastore used for the example VM cloud-init drive."
+  type        = string
+  default     = "local"
+
+  validation {
+    condition     = length(trimspace(var.vm_cloud_init_datastore_id)) > 0
+    error_message = "vm_cloud_init_datastore_id must not be empty."
+  }
+}
+
+variable "vm_user" {
+  description = "Cloud-init username for the example VM."
+  type        = string
+  default     = "debian"
+
+  validation {
+    condition     = length(trimspace(var.vm_user)) > 0
+    error_message = "vm_user must not be empty."
+  }
+}
+
+variable "vm_ssh_public_keys" {
+  description = "SSH public keys for the example VM user."
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition     = alltrue([for key in var.vm_ssh_public_keys : length(trimspace(key)) > 0])
+    error_message = "vm_ssh_public_keys entries must not be empty."
+  }
+}
+
+variable "vm_ipv4_address" {
+  description = "Cloud-init IPv4 address for the example VM, or dhcp."
+  type        = string
+  default     = "dhcp"
+
+  validation {
+    condition     = var.vm_ipv4_address == "dhcp" || can(regex(".+/.+", var.vm_ipv4_address))
+    error_message = "vm_ipv4_address must be dhcp or a CIDR-style IPv4 address like 192.168.1.50/24."
+  }
+}
+
+variable "vm_ipv4_gateway" {
+  description = "Optional IPv4 gateway for the example VM when using a static address."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition     = var.vm_ipv4_address == "dhcp" ? var.vm_ipv4_gateway == null : true
+    error_message = "vm_ipv4_gateway must be null when vm_ipv4_address is dhcp."
+  }
+}
+
 variable "lxc_vm_id" {
   description = "Explicit VMID for the example LXC guest."
   type        = number

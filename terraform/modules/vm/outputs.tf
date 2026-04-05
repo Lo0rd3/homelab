@@ -1,6 +1,6 @@
 output "id" {
   description = "Terraform resource identifier for the VM."
-  value       = proxmox_virtual_environment_cloned_vm.this.id
+  value       = proxmox_virtual_environment_vm.this.id
 }
 
 output "guest_name" {

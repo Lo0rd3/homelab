@@ -1,17 +1,22 @@
 module "vm" {
   source = "../../modules/vm"
 
-  node_name          = var.target_node_name
-  guest_name         = var.vm_name
-  clone_source_vm_id = var.vm_clone_source_vm_id
-  cpu_cores          = var.vm_cpu_cores
-  memory_mb          = var.vm_memory_mb
-  disk_datastore_id  = var.vm_datastore_id
-  disk_size_gb       = var.vm_disk_size_gb
-  bridge             = var.vm_bridge
-  full_clone         = var.vm_full_clone
-  network_model      = var.vm_network_model
-  network_vlan_tag   = var.vm_vlan_tag
+  node_name               = var.target_node_name
+  guest_name              = var.vm_name
+  clone_source_vm_id      = var.vm_clone_source_vm_id
+  cpu_cores               = var.vm_cpu_cores
+  memory_mb               = var.vm_memory_mb
+  disk_datastore_id       = var.vm_datastore_id
+  disk_size_gb            = var.vm_disk_size_gb
+  bridge                  = var.vm_bridge
+  full_clone              = var.vm_full_clone
+  network_model           = var.vm_network_model
+  network_vlan_tag        = var.vm_vlan_tag
+  cloud_init_datastore_id = var.vm_cloud_init_datastore_id
+  user_name               = var.vm_user
+  ssh_public_keys         = var.vm_ssh_public_keys
+  ipv4_address            = var.vm_ipv4_address
+  ipv4_gateway            = var.vm_ipv4_gateway
 }
 
 module "lxc" {

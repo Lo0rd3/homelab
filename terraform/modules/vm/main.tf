@@ -6,34 +6,49 @@ terraform {
   }
 }
 
-resource "proxmox_virtual_environment_cloned_vm" "this" {
-  node_name = var.node_name
-  name      = var.guest_name
-  clone = {
-    source_vm_id = var.clone_source_vm_id
-    full         = var.full_clone
-  }
+resource "proxmox_virtual_environment_vm" "this" {
+  node_name  = var.node_name
+  name       = var.guest_name
+  boot_order = ["scsi0"]
 
-  cpu = {
+  clone {
+    vm_id = var.clone_source_vm_id
+    full  = var.full_clone
+  }
+  agent {
+    enabled = true
+  }
+  cpu {
     cores = var.cpu_cores
   }
 
-  memory = {
-    size = var.memory_mb
+  memory {
+    dedicated = var.memory_mb
   }
 
-  network = {
-    net0 = {
-      bridge = var.bridge
-      model  = var.network_model
-      tag    = var.network_vlan_tag
+  initialization {
+    datastore_id = var.cloud_init_datastore_id
+
+    ip_config {
+      ipv4 {
+        address = var.ipv4_address
+        gateway = var.ipv4_gateway
+      }
+    }
+
+    user_account {
+      username = var.user_name
+      keys     = var.ssh_public_keys
     }
   }
 
-  disk = {
-    scsi0 = {
-      datastore_id = var.disk_datastore_id
-      size_gb      = var.disk_size_gb
-    }
+  network_device {
+    bridge  = var.bridge
+    model   = var.network_model
+    vlan_id = var.network_vlan_tag
+  }
+
+  serial_device {
+    device = "socket"
   }
 }

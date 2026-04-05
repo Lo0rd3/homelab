@@ -1,0 +1,41 @@
+---
+# Safe, overridable defaults for installing Docker Engine on Debian 12.
+docker_prerequisite_packages:
+  - ca-certificates
+  - curl
+
+docker_conflicting_packages:
+  - docker.io
+  - docker-compose
+  - docker-doc
+  - podman-docker
+  - containerd
+  - runc
+
+docker_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-buildx-plugin
+  - docker-compose-plugin
+
+docker_service_names:
+  - docker
+  - containerd
+
+docker_users: []
+
+docker_apt_keyring_dir: /etc/apt/keyrings
+docker_apt_keyring_path: /etc/apt/keyrings/docker.asc
+docker_apt_keyring_url: https://download.docker.com/linux/debian/gpg
+docker_apt_repo_url: https://download.docker.com/linux/debian
+docker_apt_repo_component: stable
+docker_apt_release: "{{ ansible_facts['distribution_release'] }}"
+
+docker_architecture_map:
+  x86_64: amd64
+  aarch64: arm64
+  armv7l: armhf
+  ppc64le: ppc64el
+
+docker_apt_arch: "{{ docker_architecture_map.get(ansible_facts['architecture'], ansible_facts['architecture']) }}"
