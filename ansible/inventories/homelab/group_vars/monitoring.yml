@@ -6,6 +6,12 @@ monitoring_compose_project_name: monitoring
 monitoring_compose_file_name: compose.yml
 monitoring_compose_env_file_name: monitoring.env
 
+# Keep the defaults light enough for a small homelab VM.
+monitoring_prometheus_scrape_interval: 30s
+monitoring_prometheus_evaluation_interval: 30s
+monitoring_prometheus_retention_time: 7d
+monitoring_prometheus_retention_size: 4GB
+
 monitoring_prometheus_enabled: true
 monitoring_prometheus_image: prom/prometheus
 monitoring_prometheus_image_tag: v3.3.0
@@ -13,6 +19,7 @@ monitoring_prometheus_image_tag: v3.3.0
 monitoring_grafana_enabled: true
 monitoring_grafana_image: grafana/grafana
 monitoring_grafana_image_tag: 11.6.0
+monitoring_grafana_admin_user: admin
 
 monitoring_alertmanager_enabled: true
 monitoring_alertmanager_image: prom/alertmanager

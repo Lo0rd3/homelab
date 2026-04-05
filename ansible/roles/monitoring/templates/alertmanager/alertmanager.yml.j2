@@ -5,17 +5,35 @@ global:
   resolve_timeout: {{ monitoring_alertmanager_resolve_timeout | default('5m') }}
 
 route:
-  receiver: {{ monitoring_alertmanager_default_receiver_name | default('default-webhook') | to_json }}
+  receiver: {{ monitoring_alertmanager_warning_receiver_name | default('warning-webhook') | to_json }}
   group_by:
     - alertname
+    - severity
     - job
     - instance
   group_wait: {{ monitoring_alertmanager_group_wait | default('30s') }}
   group_interval: {{ monitoring_alertmanager_group_interval | default('5m') }}
   repeat_interval: {{ monitoring_alertmanager_repeat_interval | default('4h') }}
+  routes:
+    - matchers:
+        - severity="critical"
+      receiver: {{ monitoring_alertmanager_critical_receiver_name | default('critical-webhook') | to_json }}
+
+inhibit_rules:
+  - source_matchers:
+      - severity="critical"
+    target_matchers:
+      - severity="warning"
+    equal:
+      - alertname
+      - instance
 
 receivers:
-  - name: {{ monitoring_alertmanager_default_receiver_name | default('default-webhook') | to_json }}
+  - name: {{ monitoring_alertmanager_warning_receiver_name | default('warning-webhook') | to_json }}
     webhook_configs:
-      - url: {{ monitoring_alertmanager_default_webhook_url | default('http://alertmanager-webhook-placeholder.local/') | to_json }}
+      - url: {{ monitoring_alertmanager_warning_webhook_url | default('http://alertmanager-webhook-placeholder.local/warning') | to_json }}
+        send_resolved: true
+  - name: {{ monitoring_alertmanager_critical_receiver_name | default('critical-webhook') | to_json }}
+    webhook_configs:
+      - url: {{ monitoring_alertmanager_critical_webhook_url | default('http://alertmanager-webhook-placeholder.local/critical') | to_json }}
         send_resolved: true

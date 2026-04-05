@@ -14,6 +14,22 @@
     chdir: "{{ monitoring_compose_project_src }}"
   changed_when: false
 
+- name: Check required monitoring files exist
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop: "{{ monitoring_validate_required_files }}"
+  register: monitoring_required_files
+  changed_when: false
+
+- name: Assert required monitoring files are present
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - item.stat.exists
+      - item.stat.isreg or item.stat.isdir
+    fail_msg: "Required monitoring asset is missing: {{ item.stat.path | default('unknown path') }}"
+  loop: "{{ monitoring_required_files.results }}"
+
 - name: Get running monitoring Compose services
   ansible.builtin.command:
     argv:

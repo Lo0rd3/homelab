@@ -11,3 +11,44 @@ groups:
           summary: Monitoring target is down
           description: >-
             {% raw %}Prometheus has not scraped {{ $labels.job }} on {{ $labels.instance }} for 5 minutes.{% endraw %}
+
+      - alert: HostFilesystemLow
+        expr: >-
+          (
+            node_filesystem_avail_bytes{job="node_exporter",mountpoint="/",fstype!~"tmpfs|overlay|squashfs"}
+            /
+            node_filesystem_size_bytes{job="node_exporter",mountpoint="/",fstype!~"tmpfs|overlay|squashfs"}
+          ) < 0.15
+        for: {{ monitoring_prometheus_host_filesystem_low_for | default('10m') }}
+        labels:
+          severity: critical
+        annotations:
+          summary: Root filesystem space is low
+          description: >-
+            {% raw %}Root filesystem on {{ $labels.instance }} has less than 15% free space remaining.{% endraw %}
+
+      - alert: HostMemoryLow
+        expr: >-
+          (
+            node_memory_MemAvailable_bytes{job="node_exporter"}
+            /
+            node_memory_MemTotal_bytes{job="node_exporter"}
+          ) < 0.10
+        for: {{ monitoring_prometheus_host_memory_low_for | default('10m') }}
+        labels:
+          severity: warning
+        annotations:
+          summary: Host memory is running low
+          description: >-
+            {% raw %}Available memory on {{ $labels.instance }} has been below 10% for 10 minutes.{% endraw %}
+
+      - alert: HostCpuHigh
+        expr: >-
+          100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{job="node_exporter",mode="idle"}[5m]))) > 90
+        for: {{ monitoring_prometheus_host_cpu_high_for | default('15m') }}
+        labels:
+          severity: warning
+        annotations:
+          summary: Host CPU usage is high
+          description: >-
+            {% raw %}CPU usage on {{ $labels.instance }} has been above 90% for 15 minutes.{% endraw %}

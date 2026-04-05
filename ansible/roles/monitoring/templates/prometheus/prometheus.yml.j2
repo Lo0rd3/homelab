@@ -2,8 +2,8 @@
 # Prometheus config for the local Compose-based monitoring stack.
 # Keep secret material in mounted files or vaulted vars, not inline here.
 global:
-  scrape_interval: {{ monitoring_prometheus_scrape_interval | default('15s') }}
-  evaluation_interval: {{ monitoring_prometheus_evaluation_interval | default('15s') }}
+  scrape_interval: {{ monitoring_prometheus_scrape_interval | default('30s') }}
+  evaluation_interval: {{ monitoring_prometheus_evaluation_interval | default('30s') }}
 
 rule_files:
   - /etc/prometheus/rules/*.yml

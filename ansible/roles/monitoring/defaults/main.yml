@@ -14,6 +14,7 @@ monitoring_compose_env_files:
 monitoring_config_root: /opt/monitoring/config
 monitoring_data_root: /opt/monitoring/data
 monitoring_runtime_secrets_root: /etc/monitoring/secrets
+monitoring_runtime_root: /etc/monitoring
 
 monitoring_prometheus_config_path: "{{ monitoring_config_root }}/prometheus/prometheus.yml"
 monitoring_prometheus_rules_path: "{{ monitoring_config_root }}/prometheus/rules"
@@ -25,6 +26,7 @@ monitoring_alertmanager_data_path: "{{ monitoring_data_root }}/alertmanager"
 monitoring_grafana_provisioning_path: "{{ monitoring_config_root }}/grafana/provisioning"
 monitoring_grafana_dashboards_host_path: "{{ monitoring_config_root }}/grafana/dashboards"
 monitoring_grafana_data_path: "{{ monitoring_data_root }}/grafana"
+monitoring_grafana_admin_password_file: "{{ monitoring_runtime_secrets_root }}/grafana_admin_password"
 
 monitoring_restart_policy: unless-stopped
 monitoring_grafana_admin_user: admin
@@ -78,8 +80,18 @@ monitoring_directories:
     owner: root
     group: root
 
+  - path: "{{ monitoring_grafana_dashboards_host_path }}/infrastructure"
+    mode: "0750"
+    owner: root
+    group: root
+
   - path: "{{ monitoring_data_root }}"
     mode: "0750"
+    owner: root
+    group: root
+
+  - path: "{{ monitoring_runtime_root }}"
+    mode: "0755"
     owner: root
     group: root
 
@@ -99,7 +111,7 @@ monitoring_directories:
     group: "472"
 
   - path: "{{ monitoring_runtime_secrets_root }}"
-    mode: "0700"
+    mode: "0750"
     owner: root
     group: root
 
@@ -126,6 +138,11 @@ monitoring_managed_templates:
     dest: "{{ monitoring_grafana_provisioning_path }}/dashboards/dashboards.yml"
     mode: "0644"
 
+monitoring_dashboard_files:
+  - src: grafana/dashboards/infrastructure/monitoring-overview.json
+    dest: "{{ monitoring_grafana_dashboards_host_path }}/infrastructure/monitoring-overview.json"
+    mode: "0644"
+
 monitoring_compose_deploy: true
 monitoring_compose_wait: true
 monitoring_compose_wait_timeout: 120
@@ -136,6 +153,7 @@ monitoring_compose_remove_orphans: false
 monitoring_validate_after_deploy: true
 
 monitoring_required_secret_variables: []
+monitoring_grafana_write_admin_password_file: true
 
 monitoring_validate_endpoints:
   - name: prometheus
@@ -153,3 +171,12 @@ monitoring_validate_endpoints:
   - name: cadvisor
     enabled: "{{ monitoring_cadvisor_enabled | default(true) | bool }}"
     url: "http://127.0.0.1:{{ monitoring_cadvisor_port }}/healthz"
+
+monitoring_validate_required_files:
+  - "{{ monitoring_prometheus_config_path }}"
+  - "{{ monitoring_prometheus_rules_path }}/system.rules.yml"
+  - "{{ monitoring_alertmanager_config_path }}"
+  - "{{ monitoring_grafana_provisioning_path }}/datasources/prometheus.yml"
+  - "{{ monitoring_grafana_provisioning_path }}/dashboards/dashboards.yml"
+  - "{{ monitoring_grafana_dashboards_host_path }}/infrastructure/monitoring-overview.json"
+  - "{{ monitoring_grafana_admin_password_file }}"

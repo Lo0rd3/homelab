@@ -27,10 +27,15 @@
       - monitoring_runtime_secrets_root is string
       - monitoring_runtime_secrets_root | length > 0
       - monitoring_runtime_secrets_root is match('^/')
+      - monitoring_grafana_admin_password_file is string
+      - monitoring_grafana_admin_password_file | length > 0
+      - monitoring_grafana_admin_password_file is match('^/')
       - monitoring_directories is sequence
       - monitoring_directories is not string
       - monitoring_managed_templates is sequence
       - monitoring_managed_templates is not string
+      - monitoring_dashboard_files is sequence
+      - monitoring_dashboard_files is not string
       - monitoring_compose_deploy is boolean
       - monitoring_required_secret_variables is sequence
       - monitoring_required_secret_variables is not string
@@ -47,6 +52,47 @@
       - vars[item] | string | length > 0
   loop: "{{ monitoring_required_secret_variables }}"
   when: monitoring_stack_enabled
+
+- name: Write Grafana admin password file from external secret input
+  ansible.builtin.copy:
+    dest: "{{ monitoring_grafana_admin_password_file }}"
+    content: "{{ monitoring_grafana_admin_password }}\n"
+    owner: root
+    group: root
+    mode: '0640'
+  when:
+    - monitoring_stack_enabled
+    - monitoring_grafana_write_admin_password_file | bool
+    - monitoring_grafana_admin_password is defined
+    - monitoring_grafana_admin_password is not none
+    - monitoring_grafana_admin_password | string | length > 0
+  no_log: true
+
+- name: Verify Grafana admin password file exists
+  ansible.builtin.stat:
+    path: "{{ monitoring_grafana_admin_password_file }}"
+  register: monitoring_grafana_admin_password_file_stat
+  when: monitoring_stack_enabled
+
+- name: Assert Grafana admin password file is ready
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: >-
+      Grafana admin password file is missing. Pass monitoring_grafana_admin_password as an external var
+      or create {{ monitoring_grafana_admin_password_file }} before running the monitoring role.
+    that:
+      - monitoring_grafana_admin_password_file_stat.stat.exists
+      - monitoring_grafana_admin_password_file_stat.stat.isreg
+  when: monitoring_stack_enabled
+
+- name: Enforce Grafana admin password file permissions
+  ansible.builtin.file:
+    path: "{{ monitoring_grafana_admin_password_file }}"
+    state: file
+    owner: root
+    group: root
+    mode: '0640'
+  when: monitoring_stack_enabled and monitoring_grafana_admin_password_file_stat.stat.exists
 
 - name: Ensure monitoring stack directories exist
   ansible.builtin.file:
@@ -67,6 +113,17 @@
     mode: "{{ item.mode | default('0640') }}"
   loop: "{{ monitoring_managed_templates }}"
   when: monitoring_stack_enabled and monitoring_managed_templates | length > 0
+  notify: Restart monitoring stack
+
+- name: Copy Grafana dashboard files
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ item.owner | default(monitoring_directory_owner) }}"
+    group: "{{ item.group | default(monitoring_directory_group) }}"
+    mode: "{{ item.mode | default('0644') }}"
+  loop: "{{ monitoring_dashboard_files }}"
+  when: monitoring_stack_enabled and monitoring_dashboard_files | length > 0
   notify: Restart monitoring stack
 
 - name: Deploy monitoring stack with Docker Compose

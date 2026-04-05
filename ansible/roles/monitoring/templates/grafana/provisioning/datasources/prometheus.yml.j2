@@ -2,6 +2,7 @@ apiVersion: 1
 
 datasources:
   - name: {{ monitoring_grafana_prometheus_datasource_name | default('Prometheus') | to_json }}
+    uid: {{ monitoring_grafana_prometheus_datasource_uid | default('prometheus') | to_json }}
     type: prometheus
     access: proxy
     url: {{ monitoring_grafana_prometheus_url | default('http://prometheus:9090') | to_json }}
