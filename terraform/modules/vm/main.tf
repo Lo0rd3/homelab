@@ -12,9 +12,17 @@ resource "proxmox_virtual_environment_vm" "this" {
   boot_order = ["scsi0"]
 
   clone {
-    vm_id = var.clone_source_vm_id
-    full  = var.full_clone
+    vm_id        = var.clone_source_vm_id
+    full         = var.full_clone
+    datastore_id = var.disk_datastore_id
   }
+
+  disk {
+    interface    = "scsi0"
+    size         = var.disk_size_gb
+    datastore_id = var.disk_datastore_id
+  }
+
   agent {
     enabled = true
   }
