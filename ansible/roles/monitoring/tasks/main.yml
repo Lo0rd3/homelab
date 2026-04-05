@@ -1,0 +1,89 @@
+---
+- name: Validate monitoring role inputs
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: Monitoring role variables must use the documented types and keep runtime secrets external.
+    that:
+      - monitoring_stack_enabled is boolean
+      - monitoring_stack_name is string
+      - monitoring_stack_name | length > 0
+      - monitoring_compose_project_name is string
+      - monitoring_compose_project_name | length > 0
+      - monitoring_compose_project_src is string
+      - monitoring_compose_project_src | length > 0
+      - monitoring_compose_project_src is match('^/')
+      - monitoring_compose_files is sequence
+      - monitoring_compose_files is not string
+      - monitoring_compose_files | length > 0
+      - monitoring_compose_env_files is sequence
+      - monitoring_compose_env_files is not string
+      - monitoring_compose_env_files | length > 0
+      - monitoring_config_root is string
+      - monitoring_config_root | length > 0
+      - monitoring_config_root is match('^/')
+      - monitoring_data_root is string
+      - monitoring_data_root | length > 0
+      - monitoring_data_root is match('^/')
+      - monitoring_runtime_secrets_root is string
+      - monitoring_runtime_secrets_root | length > 0
+      - monitoring_runtime_secrets_root is match('^/')
+      - monitoring_directories is sequence
+      - monitoring_directories is not string
+      - monitoring_managed_templates is sequence
+      - monitoring_managed_templates is not string
+      - monitoring_compose_deploy is boolean
+      - monitoring_required_secret_variables is sequence
+      - monitoring_required_secret_variables is not string
+      - monitoring_compose_env_files | select('match', '^[^/]+$') | list | length == monitoring_compose_env_files | length
+      - monitoring_compose_files | select('match', '^[^/]+$') | list | length == monitoring_compose_files | length
+
+- name: Ensure required secret variables are provided externally
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: Required secret values must be injected from inventory, vault, or host env files outside tracked role defaults.
+    that:
+      - vars[item] is defined
+      - vars[item] is not none
+      - vars[item] | string | length > 0
+  loop: "{{ monitoring_required_secret_variables }}"
+  when: monitoring_stack_enabled
+
+- name: Ensure monitoring stack directories exist
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner | default(monitoring_directory_owner) }}"
+    group: "{{ item.group | default(monitoring_directory_group) }}"
+    mode: "{{ item.mode }}"
+  loop: "{{ monitoring_directories }}"
+  when: monitoring_stack_enabled
+
+- name: Render monitoring stack templates
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ item.owner | default(monitoring_directory_owner) }}"
+    group: "{{ item.group | default(monitoring_directory_group) }}"
+    mode: "{{ item.mode | default('0640') }}"
+  loop: "{{ monitoring_managed_templates }}"
+  when: monitoring_stack_enabled and monitoring_managed_templates | length > 0
+  notify: Restart monitoring stack
+
+- name: Deploy monitoring stack with Docker Compose
+  community.docker.docker_compose_v2:
+    project_src: "{{ monitoring_compose_project_src }}"
+    project_name: "{{ monitoring_compose_project_name }}"
+    files: "{{ monitoring_compose_files }}"
+    env_files: "{{ monitoring_compose_env_files }}"
+    state: present
+    pull: "{{ monitoring_compose_pull_policy }}"
+    build: "{{ monitoring_compose_build_policy }}"
+    recreate: auto
+    remove_orphans: "{{ monitoring_compose_remove_orphans | bool }}"
+    wait: "{{ monitoring_compose_wait | bool }}"
+    wait_timeout: "{{ monitoring_compose_wait_timeout | int }}"
+  when: monitoring_stack_enabled and monitoring_compose_deploy
+
+- name: Run monitoring validation checks
+  ansible.builtin.include_tasks: validate.yml
+  when: monitoring_stack_enabled and monitoring_compose_deploy and monitoring_validate_after_deploy

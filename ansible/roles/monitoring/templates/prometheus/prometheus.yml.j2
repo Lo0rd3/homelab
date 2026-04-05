@@ -1,0 +1,40 @@
+---
+# Prometheus config for the local Compose-based monitoring stack.
+# Keep secret material in mounted files or vaulted vars, not inline here.
+global:
+  scrape_interval: {{ monitoring_prometheus_scrape_interval | default('15s') }}
+  evaluation_interval: {{ monitoring_prometheus_evaluation_interval | default('15s') }}
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+{% for target in monitoring_prometheus_alertmanager_targets | default(['alertmanager:9093']) %}
+            - {{ target | to_json }}
+{% endfor %}
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets:
+{% for target in monitoring_prometheus_self_targets | default(['prometheus:9090']) %}
+          - {{ target | to_json }}
+{% endfor %}
+
+  - job_name: node_exporter
+    static_configs:
+      - targets:
+{% for target in monitoring_prometheus_node_exporter_targets | default(['node-exporter:9100']) %}
+          - {{ target | to_json }}
+{% endfor %}
+
+  - job_name: cadvisor
+    scrape_interval: {{ monitoring_prometheus_cadvisor_scrape_interval | default('15s') }}
+    static_configs:
+      - targets:
+{% for target in monitoring_prometheus_cadvisor_targets | default(['cadvisor:8080']) %}
+          - {{ target | to_json }}
+{% endfor %}

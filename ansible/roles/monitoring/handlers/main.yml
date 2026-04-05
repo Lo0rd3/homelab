@@ -1,0 +1,9 @@
+---
+- name: Restart monitoring stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ monitoring_compose_project_src }}"
+    project_name: "{{ monitoring_compose_project_name }}"
+    files: "{{ monitoring_compose_files }}"
+    env_files: "{{ monitoring_compose_env_files }}"
+    state: restarted
+  when: monitoring_stack_enabled and monitoring_compose_deploy

@@ -1,0 +1,81 @@
+---
+services:
+  prometheus:
+    image: "${PROMETHEUS_IMAGE}"
+    restart: "${MONITORING_RESTART_POLICY}"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION_TIME}
+      - --storage.tsdb.retention.size=${PROMETHEUS_RETENTION_SIZE}
+      - --storage.tsdb.wal-compression
+      - --web.enable-lifecycle
+    ports:
+      - "${PROMETHEUS_PUBLISHED_PORT}"
+    volumes:
+      - "${PROMETHEUS_CONFIG_PATH}:/etc/prometheus/prometheus.yml:ro"
+      - "${PROMETHEUS_RULES_PATH}:/etc/prometheus/rules:ro"
+      - "${PROMETHEUS_DATA_PATH}:/prometheus"
+    depends_on:
+      - alertmanager
+      - node-exporter
+      - cadvisor
+
+  grafana:
+    image: "${GRAFANA_IMAGE}"
+    restart: "${MONITORING_RESTART_POLICY}"
+    ports:
+      - "${GRAFANA_PUBLISHED_PORT}"
+    environment:
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_SERVER_ROOT_URL: ${GRAFANA_SERVER_ROOT_URL}
+    volumes:
+      - "${GRAFANA_PROVISIONING_PATH}:/etc/grafana/provisioning:ro"
+      - "${GRAFANA_DASHBOARDS_HOST_PATH}:/var/lib/grafana/dashboards:ro"
+      - "${GRAFANA_DATA_PATH}:/var/lib/grafana"
+    depends_on:
+      - prometheus
+
+  alertmanager:
+    image: "${ALERTMANAGER_IMAGE}"
+    restart: "${MONITORING_RESTART_POLICY}"
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    ports:
+      - "${ALERTMANAGER_PUBLISHED_PORT}"
+    volumes:
+      - "${ALERTMANAGER_CONFIG_PATH}:/etc/alertmanager/alertmanager.yml:ro"
+      - "${ALERTMANAGER_DATA_PATH}:/alertmanager"
+
+  node-exporter:
+    image: "${NODE_EXPORTER_IMAGE}"
+    restart: "${MONITORING_RESTART_POLICY}"
+    ports:
+      - "${NODE_EXPORTER_PUBLISHED_PORT}"
+    command:
+      - --path.rootfs=/host
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+)($|/)
+    volumes:
+      - "/:/host:ro,rslave"
+      - "/proc:/host/proc:ro"
+      - "/sys:/host/sys:ro"
+
+  cadvisor:
+    image: "${CADVISOR_IMAGE}"
+    restart: "${MONITORING_RESTART_POLICY}"
+    privileged: true
+    ports:
+      - "${CADVISOR_PUBLISHED_PORT}"
+    devices:
+      - /dev/kmsg
+    volumes:
+      - "/:/rootfs:ro"
+      - "/var/run:/var/run:ro"
+      - "/sys:/sys:ro"
+      - "/var/lib/docker:/var/lib/docker:ro"
+      - "/dev/disk:/dev/disk:ro"

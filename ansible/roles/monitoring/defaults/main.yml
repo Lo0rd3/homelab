@@ -1,0 +1,155 @@
+---
+# Safe, overridable defaults for Compose-based monitoring stack deployment.
+monitoring_stack_enabled: true
+monitoring_stack_name: monitoring
+monitoring_compose_project_name: "{{ monitoring_stack_name }}"
+monitoring_compose_project_src: "{{ docker_compose_base_dir }}/{{ monitoring_stack_name }}"
+monitoring_compose_file_name: compose.yml
+monitoring_compose_files:
+  - "{{ monitoring_compose_file_name }}"
+monitoring_compose_env_file_name: monitoring.env
+monitoring_compose_env_files:
+  - "{{ monitoring_compose_env_file_name }}"
+
+monitoring_config_root: /opt/monitoring/config
+monitoring_data_root: /opt/monitoring/data
+monitoring_runtime_secrets_root: /etc/monitoring/secrets
+
+monitoring_prometheus_config_path: "{{ monitoring_config_root }}/prometheus/prometheus.yml"
+monitoring_prometheus_rules_path: "{{ monitoring_config_root }}/prometheus/rules"
+monitoring_prometheus_data_path: "{{ monitoring_data_root }}/prometheus"
+
+monitoring_alertmanager_config_path: "{{ monitoring_config_root }}/alertmanager/alertmanager.yml"
+monitoring_alertmanager_data_path: "{{ monitoring_data_root }}/alertmanager"
+
+monitoring_grafana_provisioning_path: "{{ monitoring_config_root }}/grafana/provisioning"
+monitoring_grafana_dashboards_host_path: "{{ monitoring_config_root }}/grafana/dashboards"
+monitoring_grafana_data_path: "{{ monitoring_data_root }}/grafana"
+
+monitoring_restart_policy: unless-stopped
+monitoring_grafana_admin_user: admin
+
+monitoring_directory_owner: root
+monitoring_directory_group: root
+
+monitoring_directories:
+  - path: "{{ monitoring_compose_project_src }}"
+    mode: "0750"
+    owner: root
+    group: root
+
+  - path: "{{ monitoring_config_root }}"
+    mode: "0750"
+    owner: root
+    group: root
+
+  - path: "{{ monitoring_config_root }}/prometheus"
+    mode: "0750"
+    owner: root
+    group: root
+
+  - path: "{{ monitoring_prometheus_rules_path }}"
+    mode: "0750"
+    owner: root
+    group: root
+
+  - path: "{{ monitoring_config_root }}/alertmanager"
+    mode: "0750"
+    owner: root
+    group: root
+
+  - path: "{{ monitoring_grafana_provisioning_path }}"
+    mode: "0750"
+    owner: root
+    group: root
+
+  - path: "{{ monitoring_grafana_provisioning_path }}/datasources"
+    mode: "0750"
+    owner: root
+    group: root
+
+  - path: "{{ monitoring_grafana_provisioning_path }}/dashboards"
+    mode: "0750"
+    owner: root
+    group: root
+
+  - path: "{{ monitoring_grafana_dashboards_host_path }}"
+    mode: "0750"
+    owner: root
+    group: root
+
+  - path: "{{ monitoring_data_root }}"
+    mode: "0750"
+    owner: root
+    group: root
+
+  - path: "{{ monitoring_prometheus_data_path }}"
+    mode: "0750"
+    owner: "65534"
+    group: "65534"
+
+  - path: "{{ monitoring_alertmanager_data_path }}"
+    mode: "0750"
+    owner: "65534"
+    group: "65534"
+
+  - path: "{{ monitoring_grafana_data_path }}"
+    mode: "0750"
+    owner: "472"
+    group: "472"
+
+  - path: "{{ monitoring_runtime_secrets_root }}"
+    mode: "0700"
+    owner: root
+    group: root
+
+monitoring_managed_templates:
+  - src: compose.yaml.j2
+    dest: "{{ monitoring_compose_project_src }}/{{ monitoring_compose_file_name }}"
+    mode: "0640"
+  - src: monitoring.env.j2
+    dest: "{{ monitoring_compose_project_src }}/{{ monitoring_compose_env_file_name }}"
+    mode: "0600"
+  - src: prometheus/prometheus.yml.j2
+    dest: "{{ monitoring_prometheus_config_path }}"
+    mode: "0644"
+  - src: prometheus/rules/system.rules.yml.j2
+    dest: "{{ monitoring_prometheus_rules_path }}/system.rules.yml"
+    mode: "0644"
+  - src: alertmanager/alertmanager.yml.j2
+    dest: "{{ monitoring_alertmanager_config_path }}"
+    mode: "0644"
+  - src: grafana/provisioning/datasources/prometheus.yml.j2
+    dest: "{{ monitoring_grafana_provisioning_path }}/datasources/prometheus.yml"
+    mode: "0644"
+  - src: grafana/provisioning/dashboards/dashboards.yml.j2
+    dest: "{{ monitoring_grafana_provisioning_path }}/dashboards/dashboards.yml"
+    mode: "0644"
+
+monitoring_compose_deploy: true
+monitoring_compose_wait: true
+monitoring_compose_wait_timeout: 120
+monitoring_compose_pull_policy: policy
+monitoring_compose_build_policy: policy
+monitoring_compose_remove_orphans: false
+
+monitoring_validate_after_deploy: true
+
+monitoring_required_secret_variables: []
+
+monitoring_validate_endpoints:
+  - name: prometheus
+    enabled: "{{ monitoring_prometheus_enabled | default(true) | bool }}"
+    url: "http://127.0.0.1:{{ monitoring_prometheus_port }}/-/healthy"
+  - name: grafana
+    enabled: "{{ monitoring_grafana_enabled | default(true) | bool }}"
+    url: "http://127.0.0.1:{{ monitoring_grafana_port }}/api/health"
+  - name: alertmanager
+    enabled: "{{ monitoring_alertmanager_enabled | default(true) | bool }}"
+    url: "http://127.0.0.1:{{ monitoring_alertmanager_port }}/-/healthy"
+  - name: node-exporter
+    enabled: "{{ monitoring_node_exporter_enabled | default(true) | bool }}"
+    url: "http://127.0.0.1:{{ monitoring_node_exporter_port }}/metrics"
+  - name: cadvisor
+    enabled: "{{ monitoring_cadvisor_enabled | default(true) | bool }}"
+    url: "http://127.0.0.1:{{ monitoring_cadvisor_port }}/healthz"

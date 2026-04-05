@@ -1,3 +1,16 @@
 ---
 # Host-specific values for monitoring-01.
 ansible_user: debian
+monitoring_compose_project_src: "{{ docker_compose_base_dir }}/{{ monitoring_stack_name }}"
+monitoring_compose_files:
+  - "{{ monitoring_compose_file_name }}"
+monitoring_compose_env_files:
+  - "{{ monitoring_compose_env_file_name }}"
+monitoring_config_root: /opt/monitoring/config
+monitoring_data_root: /opt/monitoring/data
+
+monitoring_prometheus_port: 9090
+monitoring_grafana_port: 3000
+monitoring_alertmanager_port: 9093
+monitoring_node_exporter_port: 9100
+monitoring_cadvisor_port: 8080

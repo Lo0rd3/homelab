@@ -1,0 +1,13 @@
+apiVersion: 1
+
+datasources:
+  - name: {{ monitoring_grafana_prometheus_datasource_name | default('Prometheus') | to_json }}
+    type: prometheus
+    access: proxy
+    url: {{ monitoring_grafana_prometheus_url | default('http://prometheus:9090') | to_json }}
+    isDefault: {{ (monitoring_grafana_prometheus_is_default | default(true)) | to_json }}
+    editable: false
+    jsonData:
+      httpMethod: {{ monitoring_grafana_prometheus_http_method | default('POST') | to_json }}
+      prometheusType: {{ monitoring_grafana_prometheus_type | default('Prometheus') | to_json }}
+      timeInterval: {{ monitoring_grafana_prometheus_time_interval | default('15s') | to_json }}

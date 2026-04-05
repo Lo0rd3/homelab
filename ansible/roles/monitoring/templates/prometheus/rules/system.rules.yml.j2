@@ -1,0 +1,13 @@
+---
+groups:
+  - name: monitoring-stack-starter
+    rules:
+      - alert: MonitoringTargetDown
+        expr: up{job=~"prometheus|node_exporter|cadvisor"} == 0
+        for: {{ monitoring_prometheus_target_down_for | default('5m') }}
+        labels:
+          severity: warning
+        annotations:
+          summary: Monitoring target is down
+          description: >-
+            {% raw %}Prometheus has not scraped {{ $labels.job }} on {{ $labels.instance }} for 5 minutes.{% endraw %}

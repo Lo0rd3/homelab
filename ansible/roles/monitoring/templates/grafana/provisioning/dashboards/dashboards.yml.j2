@@ -1,0 +1,13 @@
+apiVersion: 1
+
+providers:
+  - name: {{ monitoring_grafana_dashboard_provider_name | default('default') | to_json }}
+    orgId: {{ monitoring_grafana_dashboard_org_id | default(1) }}
+    folder: {{ monitoring_grafana_dashboard_folder | default('') | to_json }}
+    type: file
+    disableDeletion: {{ (monitoring_grafana_dashboard_disable_deletion | default(false)) | to_json }}
+    updateIntervalSeconds: {{ monitoring_grafana_dashboard_update_interval_seconds | default(30) }}
+    allowUiUpdates: false
+    options:
+      path: {{ monitoring_grafana_dashboards_path | default('/var/lib/grafana/dashboards') | to_json }}
+      foldersFromFilesStructure: {{ (monitoring_grafana_dashboards_from_files_structure | default(true)) | to_json }}

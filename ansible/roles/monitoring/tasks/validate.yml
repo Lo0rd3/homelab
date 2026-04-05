@@ -1,0 +1,67 @@
+---
+- name: Validate rendered Docker Compose config
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --env-file
+      - "{{ monitoring_compose_env_file_name }}"
+      - -f
+      - "{{ monitoring_compose_file_name }}"
+      - config
+      - -q
+  args:
+    chdir: "{{ monitoring_compose_project_src }}"
+  changed_when: false
+
+- name: Get running monitoring Compose services
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --env-file
+      - "{{ monitoring_compose_env_file_name }}"
+      - -f
+      - "{{ monitoring_compose_file_name }}"
+      - ps
+      - --services
+      - --status
+      - running
+  args:
+    chdir: "{{ monitoring_compose_project_src }}"
+  register: monitoring_running_services
+  changed_when: false
+
+- name: Assert enabled monitoring services are running
+  ansible.builtin.assert:
+    quiet: true
+    that:
+      - item.name in monitoring_running_services.stdout_lines
+    fail_msg: "Expected monitoring service {{ item.name }} to be running."
+  loop:
+    - name: prometheus
+      enabled: "{{ monitoring_prometheus_enabled | default(true) | bool }}"
+    - name: grafana
+      enabled: "{{ monitoring_grafana_enabled | default(true) | bool }}"
+    - name: alertmanager
+      enabled: "{{ monitoring_alertmanager_enabled | default(true) | bool }}"
+    - name: node-exporter
+      enabled: "{{ monitoring_node_exporter_enabled | default(true) | bool }}"
+    - name: cadvisor
+      enabled: "{{ monitoring_cadvisor_enabled | default(true) | bool }}"
+  when: item.enabled | bool
+
+- name: Verify monitoring HTTP endpoints
+  ansible.builtin.uri:
+    url: "{{ item.url }}"
+    method: GET
+    status_code: 200
+    return_content: false
+    timeout: 10
+  register: monitoring_endpoint_check
+  changed_when: false
+  retries: 10
+  delay: 5
+  until: monitoring_endpoint_check.status == 200
+  loop: "{{ monitoring_validate_endpoints }}"
+  when: item.enabled | bool
