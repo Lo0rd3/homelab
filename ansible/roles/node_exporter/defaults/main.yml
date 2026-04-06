@@ -1,0 +1,20 @@
+---
+# Safe, overridable defaults for a lightweight Debian node_exporter service.
+node_exporter_package_name: prometheus-node-exporter
+node_exporter_binary_path: /usr/bin/prometheus-node-exporter
+node_exporter_service_name: prometheus-node-exporter
+node_exporter_service_enabled: true
+node_exporter_service_state: started
+node_exporter_web_listen_host: 127.0.0.1
+node_exporter_web_listen_port: 9100
+node_exporter_systemd_override_dir: "/etc/systemd/system/{{ node_exporter_service_name }}.service.d"
+node_exporter_systemd_override_path: "{{ node_exporter_systemd_override_dir }}/override.conf"
+node_exporter_filesystem_mount_points_exclude: '^/(dev|proc|run/credentials/.+|sys|var/lib/docker/.+|var/lib/containers/storage/.+)($|/)'
+node_exporter_filesystem_fs_types_exclude: '^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|mqueue|nsfs|overlay|proc|pstore|securityfs|selinuxfs|squashfs|sysfs|tracefs)$'
+node_exporter_default_flags:
+  - "--web.listen-address={{ node_exporter_web_listen_host }}:{{ node_exporter_web_listen_port }}"
+  - --runtime.gomaxprocs=1
+  - --web.disable-exporter-metrics
+  - "--collector.filesystem.mount-points-exclude={{ node_exporter_filesystem_mount_points_exclude }}"
+  - "--collector.filesystem.fs-types-exclude={{ node_exporter_filesystem_fs_types_exclude }}"
+node_exporter_extra_flags: []

@@ -1,0 +1,10 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+
+- name: Restart node exporter
+  ansible.builtin.systemd_service:
+    name: "{{ node_exporter_service_name }}"
+    state: restarted
+  when: node_exporter_service_state == 'started'

@@ -1,0 +1,6 @@
+---
+- name: Apply node_exporter role to standalone monitored hosts
+  hosts: all
+  become: true
+  roles:
+    - role: node_exporter

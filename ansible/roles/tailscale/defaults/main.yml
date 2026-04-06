@@ -1,0 +1,46 @@
+---
+# Safe, overridable defaults for installing and configuring Tailscale on Debian routers/LXCs.
+tailscale_prerequisite_packages:
+  - ca-certificates
+  - curl
+  - gnupg
+  - python3-debian
+
+tailscale_packages:
+  - tailscale
+
+tailscale_service_name: tailscaled
+tailscale_state_file: /var/lib/tailscale/tailscaled.state
+
+tailscale_apt_repo_url: https://pkgs.tailscale.com/stable/debian
+tailscale_apt_repo_name: tailscale
+tailscale_apt_suite: "{{ ansible_facts['distribution_release'] }}"
+tailscale_apt_components:
+  - main
+tailscale_apt_key_url: "{{ tailscale_apt_repo_url }}/{{ tailscale_apt_suite }}.noarmor.gpg"
+
+tailscale_architecture_map:
+  x86_64: amd64
+  aarch64: arm64
+  armv7l: armhf
+  armv6l: armhf
+
+tailscale_apt_architecture: "{{ tailscale_architecture_map.get(ansible_facts['architecture'], ansible_facts['architecture']) }}"
+
+tailscale_authenticate: true
+tailscale_auth_key: ""
+
+tailscale_advertise_routes:
+  - 192.168.1.0/24
+
+tailscale_advertise_exit_node: false
+
+tailscale_sysctl_settings:
+  - name: net.ipv4.ip_forward
+    value: '1'
+  - name: net.ipv6.conf.all.forwarding
+    value: '1'
+
+# Keep default subnet-router SNAT behavior by not setting --snat-subnet-routes=false.
+tailscale_extra_up_flags: []
+tailscale_extra_set_flags: []

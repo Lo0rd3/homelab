@@ -1,0 +1,10 @@
+---
+# Host-specific values for tailscale-01.
+ansible_user: root
+
+tailscale_advertise_routes:
+  - 192.168.1.0/24
+tailscale_advertise_exit_node: true
+
+# Expose lightweight host metrics to the existing monitoring VM.
+node_exporter_web_listen_host: 0.0.0.0

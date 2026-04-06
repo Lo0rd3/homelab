@@ -34,6 +34,9 @@ module "lxc" {
   bridge                 = var.lxc_bridge
   network_interface_name = var.lxc_network_interface_name
   ipv4_address           = var.lxc_ipv4_address
+  ipv4_gateway           = var.lxc_ipv4_gateway
+  dns_servers            = var.lxc_dns_servers
+  ssh_public_keys        = var.lxc_ssh_public_keys
   started                = var.lxc_started
   start_on_boot          = var.lxc_start_on_boot
   unprivileged           = var.lxc_unprivileged

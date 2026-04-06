@@ -22,21 +22,26 @@ vm_ipv4_address       = "dhcp"
 vm_ipv4_gateway       = null
 
 lxc_vm_id                  = 201
-lxc_hostname               = "utility-01"
-lxc_template_file_id       = "local:vztmpl/alpine-3.20-default_20240606_amd64.tar.xz"
-lxc_datastore_id           = "local-lvm"
+lxc_hostname               = "tailscale-01"
+lxc_template_file_id       = "local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst"
+lxc_datastore_id           = "local"
 lxc_bridge                 = "vmbr0"
 lxc_cpu_cores              = 1
-lxc_memory_mb              = 512
-lxc_swap_mb                = 512
-lxc_disk_size_gb           = 8
+lxc_memory_mb              = 1024
+lxc_swap_mb                = 256
+lxc_disk_size_gb           = 6
 lxc_network_interface_name = "eth0"
-lxc_ipv4_address           = "dhcp"
+lxc_ipv4_address           = "192.168.1.2/24"
+lxc_ipv4_gateway           = "192.168.1.254"
+lxc_dns_servers            = ["192.168.1.252"]
+lxc_ssh_public_keys        = [
+  "ssh-ed25519 replace-me"
+]
 lxc_started                = true
 lxc_start_on_boot          = true
 lxc_unprivileged           = true
-lxc_description            = "Phase 1 scaffold example container"
-lxc_tags                   = ["phase-1", "scaffold"]
+lxc_description            = "Tailscale subnet router and exit node"
+lxc_tags                   = ["tailscale", "router", "remote-access"]
 lxc_os_type                = "unmanaged"
 
 # Export credentials instead of committing them:

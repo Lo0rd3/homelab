@@ -98,6 +98,45 @@ variable "ipv4_address" {
   description = "IPv4 address for the container, or dhcp for automatic assignment."
   type        = string
   default     = "dhcp"
+
+  validation {
+    condition     = var.ipv4_address == "dhcp" || can(regex(".+/.+", var.ipv4_address))
+    error_message = "ipv4_address must be dhcp or a CIDR-style IPv4 address like 192.168.1.2/24."
+  }
+}
+
+variable "ipv4_gateway" {
+  description = "Optional IPv4 gateway for the container. Leave null when using dhcp."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition     = var.ipv4_address == "dhcp" ? var.ipv4_gateway == null : length(trimspace(coalesce(var.ipv4_gateway, ""))) > 0
+    error_message = "ipv4_gateway must be set when using a static ipv4_address, and null when using dhcp."
+  }
+}
+
+variable "dns_servers" {
+  description = "DNS servers configured inside the container."
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition     = length(var.dns_servers) > 0 && alltrue([for server in var.dns_servers : length(trimspace(server)) > 0])
+    error_message = "dns_servers must contain at least one non-empty DNS server address."
+  }
+}
+
+variable "ssh_public_keys" {
+  description = "SSH public keys injected into the container user account for management access."
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition     = alltrue([for key in var.ssh_public_keys : length(trimspace(key)) > 0])
+    error_message = "ssh_public_keys entries must not be empty."
+  }
 }
 
 variable "started" {

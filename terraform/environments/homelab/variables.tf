@@ -179,9 +179,9 @@ variable "lxc_vm_id" {
 }
 
 variable "lxc_hostname" {
-  description = "Example hostname for the first lightweight service guest."
+  description = "Hostname for the Tailscale router LXC."
   type        = string
-  default     = "utility-01"
+  default     = "tailscale-01"
 
   validation {
     condition     = length(trimspace(var.lxc_hostname)) > 0
@@ -190,7 +190,7 @@ variable "lxc_hostname" {
 }
 
 variable "lxc_template_file_id" {
-  description = "Template file ID for the example LXC image."
+  description = "Template file ID for the Tailscale router Debian LXC image."
   type        = string
 
   validation {
@@ -200,7 +200,7 @@ variable "lxc_template_file_id" {
 }
 
 variable "lxc_datastore_id" {
-  description = "Datastore for the example LXC disk."
+  description = "Datastore for the Tailscale router LXC disk."
   type        = string
 
   validation {
@@ -210,7 +210,7 @@ variable "lxc_datastore_id" {
 }
 
 variable "lxc_bridge" {
-  description = "Bridge for the example LXC network interface."
+  description = "Bridge for the Tailscale router LXC network interface."
   type        = string
 
   validation {
@@ -220,7 +220,7 @@ variable "lxc_bridge" {
 }
 
 variable "lxc_cpu_cores" {
-  description = "Baseline CPU cores for the example LXC."
+  description = "CPU cores for the Tailscale router LXC."
   type        = number
   default     = 1
 
@@ -231,9 +231,9 @@ variable "lxc_cpu_cores" {
 }
 
 variable "lxc_memory_mb" {
-  description = "Baseline memory in MiB for the example LXC."
+  description = "Memory in MiB for the Tailscale router LXC."
   type        = number
-  default     = 512
+  default     = 1024
 
   validation {
     condition     = var.lxc_memory_mb >= 128
@@ -242,9 +242,9 @@ variable "lxc_memory_mb" {
 }
 
 variable "lxc_swap_mb" {
-  description = "Baseline swap in MiB for the example LXC."
+  description = "Swap in MiB for the Tailscale router LXC."
   type        = number
-  default     = 512
+  default     = 256
 
   validation {
     condition     = var.lxc_swap_mb >= 0
@@ -253,9 +253,9 @@ variable "lxc_swap_mb" {
 }
 
 variable "lxc_disk_size_gb" {
-  description = "Baseline disk size in GiB for the example LXC."
+  description = "Disk size in GiB for the Tailscale router LXC."
   type        = number
-  default     = 8
+  default     = 6
 
   validation {
     condition     = var.lxc_disk_size_gb >= 1
@@ -264,49 +264,87 @@ variable "lxc_disk_size_gb" {
 }
 
 variable "lxc_network_interface_name" {
-  description = "Primary interface name for the example LXC."
+  description = "Primary interface name for the Tailscale router LXC."
   type        = string
   default     = "eth0"
 }
 
 variable "lxc_ipv4_address" {
-  description = "IPv4 address for the example LXC, or dhcp for automatic assignment."
+  description = "IPv4 address for the Tailscale router LXC, or dhcp for automatic assignment."
   type        = string
-  default     = "dhcp"
+  default     = "192.168.1.2/24"
+
+  validation {
+    condition     = var.lxc_ipv4_address == "dhcp" || can(regex(".+/.+", var.lxc_ipv4_address))
+    error_message = "lxc_ipv4_address must be dhcp or a CIDR-style IPv4 address like 192.168.1.2/24."
+  }
+}
+
+variable "lxc_ipv4_gateway" {
+  description = "IPv4 gateway for the Tailscale router LXC when using a static address."
+  type        = string
+  default     = "192.168.1.254"
+
+  validation {
+    condition     = var.lxc_ipv4_address == "dhcp" ? var.lxc_ipv4_gateway == null : length(trimspace(var.lxc_ipv4_gateway)) > 0
+    error_message = "lxc_ipv4_gateway must be set when lxc_ipv4_address is static."
+  }
+}
+
+variable "lxc_dns_servers" {
+  description = "DNS servers for the Tailscale router LXC."
+  type        = list(string)
+  default     = ["192.168.1.252"]
+
+  validation {
+    condition     = length(var.lxc_dns_servers) > 0 && alltrue([for server in var.lxc_dns_servers : length(trimspace(server)) > 0])
+    error_message = "lxc_dns_servers must contain at least one non-empty DNS server address."
+  }
+}
+
+variable "lxc_ssh_public_keys" {
+  description = "SSH public keys injected into the Tailscale router LXC for management access."
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition     = alltrue([for key in var.lxc_ssh_public_keys : length(trimspace(key)) > 0])
+    error_message = "lxc_ssh_public_keys entries must not be empty."
+  }
 }
 
 variable "lxc_started" {
-  description = "Whether the example LXC should start after creation."
+  description = "Whether the Tailscale router LXC should start after creation."
   type        = bool
   default     = true
 }
 
 variable "lxc_start_on_boot" {
-  description = "Whether the example LXC should start on node boot."
+  description = "Whether the Tailscale router LXC should start on node boot."
   type        = bool
   default     = true
 }
 
 variable "lxc_unprivileged" {
-  description = "Whether the example LXC should be unprivileged."
+  description = "Whether the Tailscale router LXC should be unprivileged."
   type        = bool
   default     = true
 }
 
 variable "lxc_description" {
-  description = "Optional description for the example LXC."
+  description = "Optional description for the Tailscale router LXC."
   type        = string
-  default     = "Phase 1 scaffold example container"
+  default     = "Tailscale subnet router and exit node"
 }
 
 variable "lxc_tags" {
-  description = "Optional lowercase tags for the example LXC to avoid Proxmox diff noise."
+  description = "Optional lowercase tags for the Tailscale router LXC to avoid Proxmox diff noise."
   type        = list(string)
-  default     = ["phase-1", "scaffold"]
+  default     = ["tailscale", "router", "remote-access"]
 }
 
 variable "lxc_os_type" {
-  description = "Container operating system type for the example LXC."
+  description = "Container operating system type for the Tailscale router LXC."
   type        = string
   default     = "unmanaged"
 }

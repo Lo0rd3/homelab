@@ -16,3 +16,21 @@
   become: true
   roles:
     - role: monitoring
+
+- name: Apply Proxmox host TUN setup for tailscale LXC hosts
+  hosts: proxmox_hosts
+  become: true
+  roles:
+    - role: proxmox_lxc_tunnel_access
+
+- name: Apply Tailscale role to tailscale router hosts
+  hosts: tailscale
+  become: true
+  roles:
+    - role: tailscale
+
+- name: Apply node_exporter role to standalone monitored hosts
+  hosts: node_exporter_hosts
+  become: true
+  roles:
+    - role: node_exporter

@@ -1,0 +1,68 @@
+---
+- name: Validate node_exporter role inputs
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: Node exporter role expects Debian hosts and the documented variable types.
+    that:
+      - ansible_facts['distribution'] == 'Debian'
+      - ansible_facts['distribution_major_version'] == '12'
+      - node_exporter_package_name is string
+      - node_exporter_package_name | length > 0
+      - node_exporter_binary_path is string
+      - node_exporter_binary_path is match('^/')
+      - node_exporter_service_name is string
+      - node_exporter_service_name | length > 0
+      - node_exporter_service_enabled is boolean
+      - node_exporter_service_state in ['started', 'stopped']
+      - node_exporter_web_listen_host is string
+      - node_exporter_web_listen_host | length > 0
+      - node_exporter_web_listen_port is integer
+      - node_exporter_web_listen_port > 0
+      - node_exporter_web_listen_port < 65536
+      - node_exporter_systemd_override_dir is string
+      - node_exporter_systemd_override_dir is match('^/')
+      - node_exporter_systemd_override_path is string
+      - node_exporter_systemd_override_path is match('^/')
+      - node_exporter_filesystem_mount_points_exclude is string
+      - node_exporter_filesystem_fs_types_exclude is string
+      - node_exporter_default_flags is sequence
+      - node_exporter_default_flags is not string
+      - node_exporter_extra_flags is sequence
+      - node_exporter_extra_flags is not string
+
+- name: Ensure node_exporter package is present
+  ansible.builtin.apt:
+    name: "{{ node_exporter_package_name }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Ensure node_exporter systemd override directory exists
+  ansible.builtin.file:
+    path: "{{ node_exporter_systemd_override_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Configure lightweight node_exporter service flags
+  ansible.builtin.copy:
+    dest: "{{ node_exporter_systemd_override_path }}"
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      [Service]
+      ExecStart=
+      ExecStart={{ ([node_exporter_binary_path] + node_exporter_default_flags + node_exporter_extra_flags) | join(' ') }}
+  register: node_exporter_systemd_override_result
+  notify:
+    - Reload systemd
+    - Restart node exporter
+
+- name: Ensure node_exporter service state
+  ansible.builtin.systemd_service:
+    name: "{{ node_exporter_service_name }}"
+    enabled: "{{ node_exporter_service_enabled }}"
+    state: "{{ node_exporter_service_state }}"
+    daemon_reload: "{{ node_exporter_systemd_override_result is changed }}"

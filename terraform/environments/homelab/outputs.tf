@@ -22,3 +22,8 @@ output "lxc_ipv4" {
   description = "IPv4 data reported by Proxmox for the example LXC scaffold."
   value       = module.lxc.ipv4
 }
+
+output "lxc_hostname" {
+  description = "Hostname used by the current homelab LXC service guest."
+  value       = var.lxc_hostname
+}

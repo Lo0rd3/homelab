@@ -1,0 +1,7 @@
+---
+# Root-only Proxmox host step for enabling /dev/net/tun on a managed LXC.
+proxmox_lxc_ctid: 0
+proxmox_lxc_config_path: "/etc/pve/lxc/{{ proxmox_lxc_ctid }}.conf"
+proxmox_lxc_tunnel_access_lines:
+  - "lxc.cgroup2.devices.allow: c 10:200 rwm"
+  - "lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file"

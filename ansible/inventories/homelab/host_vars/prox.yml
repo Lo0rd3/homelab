@@ -1,0 +1,5 @@
+---
+# Host-specific values for the Proxmox host automation step.
+ansible_user: root
+
+proxmox_lxc_ctid: 201

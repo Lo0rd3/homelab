@@ -1,0 +1,143 @@
+---
+- name: Validate Tailscale role inputs
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: Tailscale role expects Debian hosts, list-based route inputs, and external secret injection for auth keys.
+    that:
+      - ansible_facts['distribution'] == 'Debian'
+      - tailscale_prerequisite_packages is sequence
+      - tailscale_prerequisite_packages is not string
+      - tailscale_packages is sequence
+      - tailscale_packages is not string
+      - tailscale_service_name is string
+      - tailscale_service_name | length > 0
+      - tailscale_state_file is string
+      - tailscale_state_file | length > 0
+      - tailscale_state_file is match('^/')
+      - tailscale_apt_repo_url is string
+      - tailscale_apt_repo_url | length > 0
+      - tailscale_apt_repo_name is string
+      - tailscale_apt_repo_name | length > 0
+      - tailscale_apt_suite is string
+      - tailscale_apt_suite | length > 0
+      - tailscale_apt_components is sequence
+      - tailscale_apt_components is not string
+      - tailscale_apt_components | length > 0
+      - tailscale_apt_key_url is string
+      - tailscale_apt_key_url | length > 0
+      - tailscale_apt_architecture is string
+      - tailscale_apt_architecture | length > 0
+      - tailscale_authenticate is boolean
+      - tailscale_auth_key is string
+      - tailscale_advertise_routes is sequence
+      - tailscale_advertise_routes is not string
+      - tailscale_advertise_routes | length > 0
+      - tailscale_advertise_routes | select('match', '^[0-9./:,]+$') | list | length == tailscale_advertise_routes | length
+      - tailscale_advertise_exit_node is boolean
+      - tailscale_sysctl_settings is sequence
+      - tailscale_sysctl_settings is not string
+      - tailscale_sysctl_settings | length > 0
+      - tailscale_extra_up_flags is sequence
+      - tailscale_extra_up_flags is not string
+      - tailscale_extra_set_flags is sequence
+      - tailscale_extra_set_flags is not string
+
+- name: Ensure Tailscale prerequisite packages are present
+  ansible.builtin.apt:
+    name: "{{ tailscale_prerequisite_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Configure Tailscale APT repository
+  ansible.builtin.deb822_repository:
+    name: "{{ tailscale_apt_repo_name }}"
+    types:
+      - deb
+    uris:
+      - "{{ tailscale_apt_repo_url }}"
+    suites:
+      - "{{ tailscale_apt_suite }}"
+    components: "{{ tailscale_apt_components }}"
+    architectures:
+      - "{{ tailscale_apt_architecture }}"
+    signed_by: "{{ tailscale_apt_key_url }}"
+    state: present
+  register: tailscale_apt_repository
+
+- name: Refresh APT cache after adding Tailscale repository
+  ansible.builtin.apt:
+    update_cache: true
+
+- name: Ensure Tailscale packages are present
+  ansible.builtin.apt:
+    name: "{{ tailscale_packages }}"
+    state: present
+    update_cache: "{{ tailscale_apt_repository is changed }}"
+    cache_valid_time: 3600
+
+- name: Ensure Tailscale service is enabled and running
+  ansible.builtin.service:
+    name: "{{ tailscale_service_name }}"
+    enabled: true
+    state: started
+
+- name: Enable router forwarding sysctls
+  ansible.posix.sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    sysctl_set: true
+    reload: true
+    state: present
+  loop: "{{ tailscale_sysctl_settings }}"
+
+- name: Check whether Tailscale is already authenticated
+  ansible.builtin.command:
+    argv:
+      - tailscale
+      - ip
+      - -4
+  register: tailscale_ipv4
+  changed_when: false
+  failed_when: false
+
+- name: Ensure external auth key is provided when registration is still required
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: Provide tailscale_auth_key from inventory, vault, or other external secret input when the host is not yet joined.
+    that:
+      - tailscale_auth_key | length > 0
+  when:
+    - tailscale_authenticate | bool
+    - tailscale_ipv4.rc != 0
+
+- name: Register Tailscale node with auth key
+  ansible.builtin.shell: >-
+    tailscale up
+    --auth-key="${TS_AUTH_KEY}"
+    --advertise-routes="{{ tailscale_advertise_routes | join(',') }}"
+    {% if tailscale_advertise_exit_node | bool %}--advertise-exit-node {% endif %}
+    {{ tailscale_extra_up_flags | join(' ') }}
+  args:
+    executable: /bin/bash
+  environment:
+    TS_AUTH_KEY: "{{ tailscale_auth_key }}"
+  no_log: true
+  when:
+    - tailscale_authenticate | bool
+    - tailscale_ipv4.rc != 0
+
+- name: Ensure advertised subnet routes are configured
+  ansible.builtin.command:
+    argv: "{{ ['tailscale', 'set', '--advertise-routes=' ~ (tailscale_advertise_routes | join(','))] + tailscale_extra_set_flags }}"
+  changed_when: false
+  when: tailscale_ipv4.rc == 0 or tailscale_authenticate | bool
+
+- name: Ensure exit node capability is configured
+  ansible.builtin.command:
+    argv:
+      - tailscale
+      - set
+      - "--advertise-exit-node={{ 'true' if tailscale_advertise_exit_node | bool else 'false' }}"
+  changed_when: false
+  when: tailscale_ipv4.rc == 0 or tailscale_authenticate | bool

@@ -1,0 +1,15 @@
+---
+galaxy_info:
+  author: homelab-repo
+  description: Install and configure Tailscale subnet-router and exit-node capabilities on Debian hosts and LXCs.
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions:
+        - all
+
+dependencies: []
+
+collections:
+  - ansible.posix

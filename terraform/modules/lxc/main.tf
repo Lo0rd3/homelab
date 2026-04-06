@@ -40,9 +40,18 @@ resource "proxmox_virtual_environment_container" "this" {
   initialization {
     hostname = var.hostname
 
+    dns {
+      servers = var.dns_servers
+    }
+
+    user_account {
+      keys = var.ssh_public_keys
+    }
+
     ip_config {
       ipv4 {
         address = var.ipv4_address
+        gateway = var.ipv4_gateway
       }
     }
   }
@@ -51,4 +60,5 @@ resource "proxmox_virtual_environment_container" "this" {
     template_file_id = var.template_file_id
     type             = var.os_type
   }
+
 }

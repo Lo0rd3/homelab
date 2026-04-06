@@ -1,0 +1,42 @@
+---
+- name: Validate Proxmox LXC TUN role inputs
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: Proxmox LXC tunnel access role expects a root-run host task with a valid CTID and config path.
+    that:
+      - proxmox_lxc_ctid is integer
+      - proxmox_lxc_ctid > 0
+      - proxmox_lxc_config_path is string
+      - proxmox_lxc_config_path is match('^/')
+      - proxmox_lxc_tunnel_access_lines is sequence
+      - proxmox_lxc_tunnel_access_lines is not string
+      - proxmox_lxc_tunnel_access_lines | length > 0
+
+- name: Ensure Proxmox LXC config file exists
+  ansible.builtin.stat:
+    path: "{{ proxmox_lxc_config_path }}"
+  register: proxmox_lxc_config_stat
+
+- name: Assert Proxmox LXC config file is present
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: "Expected Proxmox LXC config file {{ proxmox_lxc_config_path }} to exist after Terraform apply."
+    that:
+      - proxmox_lxc_config_stat.stat.exists
+      - proxmox_lxc_config_stat.stat.isreg
+
+- name: Ensure TUN passthrough lines exist in Proxmox LXC config
+  ansible.builtin.lineinfile:
+    path: "{{ proxmox_lxc_config_path }}"
+    line: "{{ item }}"
+    state: present
+  loop: "{{ proxmox_lxc_tunnel_access_lines }}"
+  register: proxmox_lxc_tunnel_access_config
+
+- name: Restart LXC after Proxmox host config changes
+  ansible.builtin.command:
+    argv:
+      - pct
+      - reboot
+      - "{{ proxmox_lxc_ctid | string }}"
+  when: proxmox_lxc_tunnel_access_config is changed
