@@ -42,7 +42,7 @@ lxc_start_on_boot          = true
 lxc_unprivileged           = true
 lxc_description            = "Tailscale subnet router and exit node"
 lxc_tags                   = ["tailscale", "router", "remote-access"]
-lxc_os_type                = "unmanaged"
+lxc_os_type                = "debian"
 
 # Export credentials instead of committing them:
 #   export PROXMOX_VE_API_TOKEN="set-this-in-your-shell"
