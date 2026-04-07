@@ -1,14 +1,35 @@
 ---
-# Safe, overridable defaults for a lightweight Debian node_exporter service.
-node_exporter_package_name: prometheus-node-exporter
-node_exporter_binary_path: /usr/bin/prometheus-node-exporter
-node_exporter_service_name: prometheus-node-exporter
+# Safe, overridable defaults for a lightweight node_exporter service.
+node_exporter_package_names_debian:
+  - prometheus-node-exporter
+node_exporter_package_names_alpine:
+  - prometheus-node-exporter
+  - prometheus-node-exporter-openrc
+node_exporter_package_names: >-
+  {{
+    node_exporter_package_names_alpine
+    if ansible_facts['distribution'] == 'Alpine'
+    else node_exporter_package_names_debian
+  }}
+node_exporter_binary_path: >-
+  {{
+    '/usr/bin/node_exporter'
+    if ansible_facts['distribution'] == 'Alpine'
+    else '/usr/bin/prometheus-node-exporter'
+  }}
+node_exporter_service_name: >-
+  {{
+    'node-exporter'
+    if ansible_facts['distribution'] == 'Alpine'
+    else 'prometheus-node-exporter'
+  }}
 node_exporter_service_enabled: true
 node_exporter_service_state: started
 node_exporter_web_listen_host: 127.0.0.1
 node_exporter_web_listen_port: 9100
 node_exporter_systemd_override_dir: "/etc/systemd/system/{{ node_exporter_service_name }}.service.d"
 node_exporter_systemd_override_path: "{{ node_exporter_systemd_override_dir }}/override.conf"
+node_exporter_openrc_conf_path: "/etc/conf.d/{{ node_exporter_service_name }}"
 node_exporter_filesystem_mount_points_exclude: '^/(dev|proc|run/credentials/.+|sys|var/lib/docker/.+|var/lib/containers/storage/.+)($|/)'
 node_exporter_filesystem_fs_types_exclude: '^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|mqueue|nsfs|overlay|proc|pstore|securityfs|selinuxfs|squashfs|sysfs|tracefs)$'
 node_exporter_default_flags:

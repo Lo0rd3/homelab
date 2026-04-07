@@ -11,6 +11,15 @@
   roles:
     - role: docker
 
+- name: Bootstrap Python on Alpine hosts
+  hosts: alpine
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Ensure Python 3 is present for Ansible modules
+      ansible.builtin.raw: command -v python3 >/dev/null 2>&1 || apk add --no-cache python3
+      changed_when: false
+
 - name: Apply monitoring role to monitoring hosts
   hosts: monitoring
   become: true
@@ -34,3 +43,9 @@
   become: true
   roles:
     - role: node_exporter
+
+- name: Apply AdGuard role to adguard hosts
+  hosts: adguard
+  become: true
+  roles:
+    - role: adguard

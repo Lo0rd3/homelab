@@ -2,12 +2,12 @@
 - name: Validate node_exporter role inputs
   ansible.builtin.assert:
     quiet: true
-    fail_msg: Node exporter role expects Debian hosts and the documented variable types.
+    fail_msg: Node exporter role expects Debian or Alpine hosts and the documented variable types.
     that:
-      - ansible_facts['distribution'] == 'Debian'
-      - ansible_facts['distribution_major_version'] == '12'
-      - node_exporter_package_name is string
-      - node_exporter_package_name | length > 0
+      - ansible_facts['distribution'] in ['Debian', 'Alpine']
+      - node_exporter_package_names is sequence
+      - node_exporter_package_names is not string
+      - node_exporter_package_names | length > 0
       - node_exporter_binary_path is string
       - node_exporter_binary_path is match('^/')
       - node_exporter_service_name is string
@@ -23,6 +23,8 @@
       - node_exporter_systemd_override_dir is match('^/')
       - node_exporter_systemd_override_path is string
       - node_exporter_systemd_override_path is match('^/')
+      - node_exporter_openrc_conf_path is string
+      - node_exporter_openrc_conf_path is match('^/')
       - node_exporter_filesystem_mount_points_exclude is string
       - node_exporter_filesystem_fs_types_exclude is string
       - node_exporter_default_flags is sequence
@@ -31,21 +33,20 @@
       - node_exporter_extra_flags is not string
 
 - name: Ensure node_exporter package is present
-  ansible.builtin.apt:
-    name: "{{ node_exporter_package_name }}"
+  ansible.builtin.package:
+    name: "{{ node_exporter_package_names }}"
     state: present
-    update_cache: true
-    cache_valid_time: 3600
 
-- name: Ensure node_exporter systemd override directory exists
+- name: Ensure node_exporter systemd override directory exists on Debian
   ansible.builtin.file:
     path: "{{ node_exporter_systemd_override_dir }}"
     state: directory
     owner: root
     group: root
     mode: '0755'
+  when: ansible_facts['distribution'] == 'Debian'
 
-- name: Configure lightweight node_exporter service flags
+- name: Configure lightweight node_exporter systemd flags on Debian
   ansible.builtin.copy:
     dest: "{{ node_exporter_systemd_override_path }}"
     owner: root
@@ -59,10 +60,31 @@
   notify:
     - Reload systemd
     - Restart node exporter
+  when: ansible_facts['distribution'] == 'Debian'
 
-- name: Ensure node_exporter service state
+- name: Configure lightweight node_exporter OpenRC flags on Alpine
+  ansible.builtin.copy:
+    dest: "{{ node_exporter_openrc_conf_path }}"
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      command_args="{{ (node_exporter_default_flags + node_exporter_extra_flags) | join(' ') }}"
+  register: node_exporter_openrc_conf_result
+  when: ansible_facts['distribution'] == 'Alpine'
+
+- name: Ensure node_exporter service state on Debian
   ansible.builtin.systemd_service:
     name: "{{ node_exporter_service_name }}"
     enabled: "{{ node_exporter_service_enabled }}"
     state: "{{ node_exporter_service_state }}"
     daemon_reload: "{{ node_exporter_systemd_override_result is changed }}"
+  when: ansible_facts['distribution'] == 'Debian'
+
+- name: Ensure node_exporter service state on Alpine
+  ansible.builtin.service:
+    name: "{{ node_exporter_service_name }}"
+    enabled: "{{ node_exporter_service_enabled }}"
+    state: "{{ node_exporter_service_state }}"
+    runlevel: default
+  when: ansible_facts['distribution'] == 'Alpine'

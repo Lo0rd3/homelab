@@ -1,0 +1,10 @@
+---
+# Root-only Proxmox host step for staging host files into an existing LXC.
+proxmox_host_file_exports_ctid: 0
+proxmox_host_file_exports_mappings:
+  - source_path: /root/AdGuardHome.yaml
+    guest_path: /var/lib/adguard/import/AdGuardHome.yaml
+    mode: '0600'
+  - source_path: /root/leases.json
+    guest_path: /var/lib/adguard/import/data/leases.json
+    mode: '0600'

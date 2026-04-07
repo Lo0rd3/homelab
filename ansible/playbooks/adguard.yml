@@ -1,0 +1,42 @@
+---
+- name: Stage AdGuard backup files from the Proxmox host into adguard-01 after LXC creation
+  hosts: proxmox_hosts
+  become: true
+  vars:
+    proxmox_host_file_exports_ctid: "{{ adguard_proxmox_host_file_exports_ctid }}"
+  roles:
+    - role: proxmox_host_file_exports
+
+- name: Bootstrap SSH access inside adguard-01 from the Proxmox host
+  hosts: proxmox_hosts
+  become: true
+  vars:
+    proxmox_lxc_ssh_bootstrap_ctid: "{{ adguard_proxmox_lxc_ssh_bootstrap_ctid }}"
+    proxmox_lxc_ssh_bootstrap_authorized_keys:
+      - "{{ hostvars['adguard-01'].adguard_ssh_bootstrap_public_key }}"
+  roles:
+    - role: proxmox_lxc_ssh_bootstrap
+
+- name: Bootstrap Python on Alpine adguard hosts
+  hosts: adguard
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Ensure Python 3 is present for Ansible modules
+      ansible.builtin.raw: command -v python3 >/dev/null 2>&1 || apk add --no-cache python3
+      changed_when: false
+
+- name: Configure AdGuard on Alpine hosts
+  hosts: adguard
+  become: true
+  vars:
+    adguard_restore_import_enabled: true
+    adguard_restore_runtime_files_enabled: true
+  roles:
+    - role: adguard
+
+- name: Configure node_exporter on standalone monitored hosts
+  hosts: adguard
+  become: true
+  roles:
+    - role: node_exporter

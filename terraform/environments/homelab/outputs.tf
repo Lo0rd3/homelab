@@ -27,3 +27,23 @@ output "lxc_hostname" {
   description = "Hostname used by the current homelab LXC service guest."
   value       = var.lxc_hostname
 }
+
+output "adguard_lxc_id" {
+  description = "Terraform identifier for the AdGuard migration LXC."
+  value       = module.adguard_lxc.id
+}
+
+output "adguard_lxc_vmid" {
+  description = "Assigned VMID for the AdGuard migration LXC."
+  value       = module.adguard_lxc.vm_id
+}
+
+output "adguard_lxc_ipv4" {
+  description = "IPv4 data reported by Proxmox for the AdGuard migration LXC."
+  value       = module.adguard_lxc.ipv4
+}
+
+output "adguard_lxc_hostname" {
+  description = "Hostname used by the AdGuard migration LXC."
+  value       = var.adguard_lxc_hostname
+}

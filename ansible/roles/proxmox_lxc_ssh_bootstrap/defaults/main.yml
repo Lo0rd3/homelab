@@ -1,0 +1,6 @@
+---
+# Root-only Proxmox host step for making a fresh Alpine LXC reachable over SSH.
+proxmox_lxc_ssh_bootstrap_ctid: 0
+proxmox_lxc_ssh_bootstrap_tmp_authorized_keys_path: "/tmp/proxmox-lxc-ssh-bootstrap-{{ proxmox_lxc_ssh_bootstrap_ctid }}-authorized_keys"
+proxmox_lxc_ssh_bootstrap_authorized_keys:
+  - "{{ adguard_ssh_bootstrap_public_key | default('') }}"

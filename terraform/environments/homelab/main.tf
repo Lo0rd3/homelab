@@ -44,3 +44,29 @@ module "lxc" {
   tags                   = var.lxc_tags
   os_type                = var.lxc_os_type
 }
+
+module "adguard_lxc" {
+  source = "../../modules/lxc"
+
+  node_name              = var.target_node_name
+  vm_id                  = var.adguard_lxc_vm_id
+  hostname               = var.adguard_lxc_hostname
+  template_file_id       = var.adguard_lxc_template_file_id
+  cpu_cores              = var.adguard_lxc_cpu_cores
+  memory_mb              = var.adguard_lxc_memory_mb
+  swap_mb                = var.adguard_lxc_swap_mb
+  disk_datastore_id      = var.adguard_lxc_datastore_id
+  disk_size_gb           = var.adguard_lxc_disk_size_gb
+  bridge                 = var.adguard_lxc_bridge
+  network_interface_name = var.adguard_lxc_network_interface_name
+  ipv4_address           = var.adguard_lxc_ipv4_address
+  ipv4_gateway           = var.adguard_lxc_ipv4_gateway
+  dns_servers            = var.adguard_lxc_dns_servers
+  ssh_public_keys        = var.adguard_lxc_ssh_public_keys
+  started                = var.adguard_lxc_started
+  start_on_boot          = var.adguard_lxc_start_on_boot
+  unprivileged           = var.adguard_lxc_unprivileged
+  description            = var.adguard_lxc_description
+  tags                   = var.adguard_lxc_tags
+  os_type                = var.adguard_lxc_os_type
+}

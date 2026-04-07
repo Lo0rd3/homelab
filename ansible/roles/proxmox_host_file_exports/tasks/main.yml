@@ -1,0 +1,100 @@
+---
+- name: Validate Proxmox host file export role inputs
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: Proxmox host file exports require an existing LXC CTID plus absolute source and guest paths for each mapping.
+    that:
+      - proxmox_host_file_exports_ctid is integer
+      - proxmox_host_file_exports_ctid > 0
+      - proxmox_host_file_exports_mappings is sequence
+      - proxmox_host_file_exports_mappings is not string
+      - proxmox_host_file_exports_mappings | length > 0
+      - proxmox_host_file_exports_mappings | map(attribute='source_path') | list | length == proxmox_host_file_exports_mappings | length
+      - proxmox_host_file_exports_mappings | map(attribute='guest_path') | list | length == proxmox_host_file_exports_mappings | length
+      - proxmox_host_file_exports_mappings | map(attribute='source_path') | select('match', '^/') | list | length == proxmox_host_file_exports_mappings | length
+      - proxmox_host_file_exports_mappings | map(attribute='guest_path') | select('match', '^/') | list | length == proxmox_host_file_exports_mappings | length
+
+- name: Confirm target LXC exists on the Proxmox host
+  ansible.builtin.command:
+    argv:
+      - pct
+      - status
+      - "{{ proxmox_host_file_exports_ctid | string }}"
+  changed_when: false
+
+- name: Check declared Proxmox host export sources
+  ansible.builtin.stat:
+    path: "{{ item.source_path }}"
+  loop: "{{ proxmox_host_file_exports_mappings }}"
+  loop_control:
+    label: "{{ item.source_path }}"
+  register: proxmox_host_file_exports_source_stats
+
+- name: Assert declared Proxmox host export sources exist
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: "Expected export source {{ item.item.source_path }} to exist as a regular file on the Proxmox host before staging into CT {{ proxmox_host_file_exports_ctid }}."
+    that:
+      - item.stat.exists
+      - item.stat.isreg
+  loop: "{{ proxmox_host_file_exports_source_stats.results }}"
+  loop_control:
+    label: "{{ item.item.source_path }}"
+
+- name: Ensure guest import directories exist before export copy
+  ansible.builtin.command:
+    argv:
+      - pct
+      - exec
+      - "{{ proxmox_host_file_exports_ctid | string }}"
+      - --
+      - mkdir
+      - -p
+      - "{{ item }}"
+  loop: "{{ proxmox_host_file_exports_mappings | map(attribute='guest_path') | map('dirname') | unique | list }}"
+  loop_control:
+    label: "{{ item }}"
+  changed_when: false
+
+- name: Stage declared Proxmox host exports into the guest import path
+  ansible.builtin.command:
+    argv:
+      - pct
+      - push
+      - "{{ proxmox_host_file_exports_ctid | string }}"
+      - "{{ item.source_path }}"
+      - "{{ item.guest_path }}"
+  loop: "{{ proxmox_host_file_exports_mappings }}"
+  loop_control:
+    label: "{{ item.source_path }} -> {{ item.guest_path }}"
+  changed_when: true
+
+- name: Apply declared guest file permissions after export copy
+  ansible.builtin.command:
+    argv:
+      - pct
+      - exec
+      - "{{ proxmox_host_file_exports_ctid | string }}"
+      - --
+      - chmod
+      - "{{ item.mode | default('0600') }}"
+      - "{{ item.guest_path }}"
+  loop: "{{ proxmox_host_file_exports_mappings }}"
+  loop_control:
+    label: "{{ item.guest_path }}"
+  changed_when: false
+
+- name: Verify staged guest import files are present
+  ansible.builtin.command:
+    argv:
+      - pct
+      - exec
+      - "{{ proxmox_host_file_exports_ctid | string }}"
+      - --
+      - test
+      - -f
+      - "{{ item.guest_path }}"
+  loop: "{{ proxmox_host_file_exports_mappings }}"
+  loop_control:
+    label: "{{ item.guest_path }}"
+  changed_when: false

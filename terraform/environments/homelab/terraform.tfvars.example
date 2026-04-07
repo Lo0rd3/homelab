@@ -44,5 +44,28 @@ lxc_description            = "Tailscale subnet router and exit node"
 lxc_tags                   = ["tailscale", "router", "remote-access"]
 lxc_os_type                = "debian"
 
+adguard_lxc_vm_id                  = 202
+adguard_lxc_hostname               = "adguard-01"
+adguard_lxc_template_file_id       = "local:vztmpl/alpine-3.23-default_20260116_amd64.tar.xz"
+adguard_lxc_datastore_id           = "local"
+adguard_lxc_bridge                 = "vmbr0"
+adguard_lxc_cpu_cores              = 1
+adguard_lxc_memory_mb              = 512
+adguard_lxc_swap_mb                = 512
+adguard_lxc_disk_size_gb           = 6
+adguard_lxc_network_interface_name = "eth0"
+adguard_lxc_ipv4_address           = "192.168.1.252/24"
+adguard_lxc_ipv4_gateway           = "192.168.1.254"
+adguard_lxc_dns_servers            = ["212.55.154.174"]
+adguard_lxc_ssh_public_keys        = [
+  "ssh-ed25519 replace-me"
+]
+adguard_lxc_started                = true
+adguard_lxc_start_on_boot          = true
+adguard_lxc_unprivileged           = true
+adguard_lxc_description            = "AdGuard Home migration LXC"
+adguard_lxc_tags                   = ["adguard", "dns", "dhcp"]
+adguard_lxc_os_type                = "alpine"
+
 # Export credentials instead of committing them:
 #   export PROXMOX_VE_API_TOKEN="set-this-in-your-shell"

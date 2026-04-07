@@ -172,5 +172,9 @@ variable "tags" {
 variable "os_type" {
   description = "Container operating system type."
   type        = string
-  default     = "unmanaged"
+
+  validation {
+    condition     = length(trimspace(var.os_type)) > 0
+    error_message = "os_type must not be empty."
+  }
 }

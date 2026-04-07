@@ -1,0 +1,298 @@
+---
+- name: Validate adguard role inputs
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: AdGuard role expects Alpine/OpenRC hosts plus explicit absolute paths for deterministic config and work directories.
+    that:
+      - ansible_facts['distribution'] == 'Alpine'
+      - ansible_facts['service_mgr'] == 'openrc'
+      - adguard_version is string
+      - adguard_version | length > 0
+      - adguard_archive_url is string
+      - adguard_archive_url | length > 0
+      - adguard_archive_sha256 is string
+      - adguard_archive_path is string
+      - adguard_archive_path is match('^/')
+      - adguard_required_packages is sequence
+      - adguard_required_packages is not string
+      - adguard_install_root is string
+      - adguard_install_root is match('^/')
+      - adguard_install_dir is string
+      - adguard_install_dir is match('^/')
+      - adguard_binary_path is string
+      - adguard_binary_path is match('^/')
+      - adguard_version_marker_path is string
+      - adguard_version_marker_path is match('^/')
+      - adguard_service_name is string
+      - adguard_service_name | length > 0
+      - adguard_service_enabled is boolean
+      - adguard_service_state in ['started', 'stopped']
+      - adguard_service_runlevel is string
+      - adguard_service_runlevel | length > 0
+      - adguard_service_reinstall is boolean
+      - adguard_require_config_for_start is boolean
+      - adguard_config_dir is string
+      - adguard_config_dir is match('^/')
+      - adguard_config_path is string
+      - adguard_config_path is match('^/')
+      - adguard_work_dir is string
+      - adguard_work_dir is match('^/')
+      - adguard_import_dir is string
+      - adguard_import_dir is match('^/')
+      - adguard_restore_config_source_path is string
+      - adguard_restore_config_source_path is match('^/')
+      - adguard_restore_import_enabled is boolean
+      - adguard_restore_runtime_files_enabled is boolean
+      - adguard_restore_runtime_files is sequence
+      - adguard_restore_runtime_files is not string
+      - adguard_restore_runtime_files | map(attribute='source_path') | list | length == adguard_restore_runtime_files | length
+      - adguard_restore_runtime_files | map(attribute='relative_path') | list | length == adguard_restore_runtime_files | length
+      - adguard_restore_runtime_files | map(attribute='relative_path') | select('match', '^[^/].*') | list | length == adguard_restore_runtime_files | length
+      - adguard_restore_runtime_files | map(attribute='relative_path') | reject('search', '(^|/)\.\.(/|$)') | list | length == adguard_restore_runtime_files | length
+      - adguard_temp_validation_mode is boolean
+      - (not adguard_temp_validation_mode) or (adguard_temp_validation_ip | length > 0)
+      - (not adguard_temp_validation_mode) or (adguard_production_ip | length > 0)
+      - adguard_disable_dhcp_during_validation is boolean
+
+- name: Ensure AdGuard Home prerequisites are present
+  ansible.builtin.package:
+    name: "{{ adguard_required_packages }}"
+    state: present
+
+- name: Ensure deterministic AdGuard directories exist
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ adguard_install_root }}", mode: '0755' }
+    - { path: "{{ adguard_config_dir }}", mode: '0750' }
+    - { path: "{{ adguard_work_dir }}", mode: '0750' }
+    - { path: "{{ adguard_work_dir }}/data", mode: '0750' }
+    - { path: "{{ adguard_import_dir }}", mode: '0750' }
+
+- name: Check current AdGuard Home binary state
+  ansible.builtin.stat:
+    path: "{{ adguard_binary_path }}"
+  register: adguard_binary_stat
+
+- name: Check current AdGuard Home version marker state
+  ansible.builtin.stat:
+    path: "{{ adguard_version_marker_path }}"
+  register: adguard_version_marker_stat
+
+- name: Read current AdGuard Home version marker
+  ansible.builtin.slurp:
+    src: "{{ adguard_version_marker_path }}"
+  register: adguard_version_marker_content
+  when: adguard_version_marker_stat.stat.exists
+
+- name: Check current AdGuard Home service state
+  ansible.builtin.stat:
+    path: "/etc/init.d/{{ adguard_service_name }}"
+  register: adguard_service_script_stat
+
+- name: Download AdGuard Home archive
+  ansible.builtin.get_url:
+    url: "{{ adguard_archive_url }}"
+    dest: "{{ adguard_archive_path }}"
+    checksum: "{{ ('sha256:' ~ adguard_archive_sha256) if (adguard_archive_sha256 | length > 0) else omit }}"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Extract AdGuard Home release archive
+  ansible.builtin.unarchive:
+    src: "{{ adguard_archive_path }}"
+    dest: "{{ adguard_install_root }}"
+    remote_src: true
+  register: adguard_release_extract_result
+  when:
+    - adguard_service_reinstall or not adguard_binary_stat.stat.exists or not adguard_version_marker_stat.stat.exists or ((adguard_version_marker_content.content | default('') | b64decode | trim) != adguard_version)
+
+- name: Re-read AdGuard Home binary state after extraction
+  ansible.builtin.stat:
+    path: "{{ adguard_binary_path }}"
+  register: adguard_binary_stat
+
+- name: Record installed AdGuard Home version
+  ansible.builtin.copy:
+    dest: "{{ adguard_version_marker_path }}"
+    content: "{{ adguard_version }}\n"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Remove existing AdGuard Home service before reinstall
+  ansible.builtin.command:
+    argv:
+      - "{{ adguard_binary_path }}"
+      - --config
+      - "{{ adguard_config_path }}"
+      - --work-dir
+      - "{{ adguard_work_dir }}"
+      - -s
+      - uninstall
+  when:
+    - adguard_service_reinstall
+    - adguard_service_script_stat.stat.exists
+  changed_when: true
+
+- name: Install AdGuard Home service with explicit config and work directories
+  ansible.builtin.command:
+    argv:
+      - "{{ adguard_binary_path }}"
+      - --config
+      - "{{ adguard_config_path }}"
+      - --work-dir
+      - "{{ adguard_work_dir }}"
+      - -s
+      - install
+  when:
+    - adguard_binary_stat.stat.exists
+    - adguard_service_reinstall or not adguard_service_script_stat.stat.exists
+  changed_when: true
+
+- name: Re-read AdGuard Home service state after install
+  ansible.builtin.stat:
+    path: "/etc/init.d/{{ adguard_service_name }}"
+  register: adguard_service_script_stat
+
+- name: Check staged AdGuard config restore source
+  ansible.builtin.stat:
+    path: "{{ adguard_restore_config_source_path }}"
+  register: adguard_restore_config_source_stat
+
+- name: Check staged AdGuard runtime restore sources
+  ansible.builtin.stat:
+    path: "{{ item.source_path }}"
+  loop: "{{ adguard_restore_runtime_files }}"
+  loop_control:
+    label: "{{ item.source_path }}"
+  register: adguard_restore_runtime_source_stats
+  when: adguard_restore_import_enabled
+
+- name: Stop AdGuard Home before restoring host-provided inputs
+  ansible.builtin.service:
+    name: "{{ adguard_service_name }}"
+    state: stopped
+    enabled: "{{ adguard_service_enabled }}"
+    runlevel: "{{ adguard_service_runlevel }}"
+  when:
+    - adguard_service_script_stat.stat.exists
+    - adguard_restore_import_enabled
+    - adguard_restore_config_source_stat.stat.exists or (adguard_restore_runtime_files_enabled and (adguard_restore_runtime_source_stats.results | selectattr('stat.exists') | list | length > 0))
+
+- name: Restore staged AdGuard configuration while service is stopped
+  ansible.builtin.copy:
+    src: "{{ adguard_restore_config_source_path }}"
+    dest: "{{ adguard_config_path }}"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "{{ adguard_restore_config_mode }}"
+  when:
+    - adguard_restore_import_enabled
+    - adguard_restore_config_source_stat.stat.exists
+
+- name: Rewrite production IP to the temporary validation IP inside AdGuard config
+  ansible.builtin.replace:
+    path: "{{ adguard_config_path }}"
+    regexp: "{{ adguard_production_ip | regex_escape }}"
+    replace: "{{ adguard_temp_validation_ip }}"
+  when:
+    - adguard_restore_import_enabled
+    - adguard_temp_validation_mode
+    - adguard_restore_config_source_stat.stat.exists
+
+- name: Disable DHCP during temporary validation
+  ansible.builtin.replace:
+    path: "{{ adguard_config_path }}"
+    regexp: '(?ms)(^dhcp:\n(?:^[ \t].*\n)*?^[ \t]+enabled:\s*)true'
+    replace: '\1false'
+  when:
+    - adguard_restore_import_enabled
+    - adguard_temp_validation_mode
+    - adguard_disable_dhcp_during_validation
+
+- name: Ensure runtime restore target directories exist
+  ansible.builtin.file:
+    path: "{{ adguard_work_dir }}/{{ item.item.relative_path | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0750'
+  loop: "{{ adguard_restore_runtime_source_stats.results }}"
+  loop_control:
+    label: "{{ item.item.relative_path }}"
+  when:
+    - adguard_restore_import_enabled
+    - adguard_restore_runtime_files_enabled
+    - item.stat.exists
+
+- name: Restore selected AdGuard runtime files while service is stopped
+  ansible.builtin.copy:
+    src: "{{ item.item.source_path }}"
+    dest: "{{ adguard_work_dir }}/{{ item.item.relative_path }}"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "{{ item.item.mode | default('0600') }}"
+  loop: "{{ adguard_restore_runtime_source_stats.results }}"
+  loop_control:
+    label: "{{ item.item.source_path }} -> {{ adguard_work_dir }}/{{ item.item.relative_path }}"
+  when:
+    - adguard_restore_import_enabled
+    - adguard_restore_runtime_files_enabled
+    - item.stat.exists
+
+- name: Check effective AdGuard configuration state
+  ansible.builtin.stat:
+    path: "{{ adguard_config_path }}"
+  register: adguard_config_path_stat
+
+- name: Require a deterministic AdGuard configuration before start
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: Provide a staged AdGuardHome.yaml restore file or pre-create the configured file before starting the service.
+    that:
+      - adguard_config_path_stat.stat.exists
+      - adguard_config_path_stat.stat.isreg
+  when:
+    - adguard_service_state == 'started'
+    - adguard_require_config_for_start
+
+- name: Validate AdGuard configuration before start
+  ansible.builtin.command:
+    argv:
+      - "{{ adguard_binary_path }}"
+      - --config
+      - "{{ adguard_config_path }}"
+      - --work-dir
+      - "{{ adguard_work_dir }}"
+      - --check-config
+  changed_when: false
+  when: adguard_config_path_stat.stat.exists
+
+- name: Restart AdGuard Home after binary changes
+  ansible.builtin.service:
+    name: "{{ adguard_service_name }}"
+    enabled: "{{ adguard_service_enabled }}"
+    state: restarted
+    runlevel: "{{ adguard_service_runlevel }}"
+  when:
+    - adguard_service_script_stat.stat.exists
+    - adguard_service_state == 'started'
+    - adguard_release_extract_result is changed
+
+- name: Ensure AdGuard Home service state
+  ansible.builtin.service:
+    name: "{{ adguard_service_name }}"
+    enabled: "{{ adguard_service_enabled }}"
+    state: "{{ adguard_service_state }}"
+    runlevel: "{{ adguard_service_runlevel }}"
+  when:
+    - adguard_service_script_stat.stat.exists
+    - not (adguard_service_state == 'started' and adguard_release_extract_result is changed)

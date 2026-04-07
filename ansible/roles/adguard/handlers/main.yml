@@ -1,0 +1,16 @@
+---
+- name: Restart AdGuardHome
+  ansible.builtin.service:
+    name: "{{ adguard_service_name }}"
+    state: restarted
+    enabled: "{{ adguard_service_enabled }}"
+    runlevel: "{{ adguard_service_runlevel }}"
+  when: adguard_service_state == 'started'
+
+- name: Reload AdGuardHome
+  ansible.builtin.service:
+    name: "{{ adguard_service_name }}"
+    state: reloaded
+    enabled: "{{ adguard_service_enabled }}"
+    runlevel: "{{ adguard_service_runlevel }}"
+  when: adguard_service_state == 'started'

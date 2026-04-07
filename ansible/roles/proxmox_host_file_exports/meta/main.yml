@@ -1,0 +1,13 @@
+---
+galaxy_info:
+  role_name: proxmox_host_file_exports
+  author: homelab-repo
+  description: Validate host-side source files on a Proxmox node and stage them into deterministic guest import paths after an LXC exists.
+  license: MIT
+  min_ansible_version: '2.14'
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+
+dependencies: []

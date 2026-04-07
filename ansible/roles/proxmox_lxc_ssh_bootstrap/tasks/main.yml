@@ -1,0 +1,119 @@
+---
+- name: Validate Proxmox LXC SSH bootstrap role inputs
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: Proxmox LXC SSH bootstrap needs a valid CTID and at least one non-empty SSH public key.
+    that:
+      - proxmox_lxc_ssh_bootstrap_ctid is integer
+      - proxmox_lxc_ssh_bootstrap_ctid > 0
+      - proxmox_lxc_ssh_bootstrap_tmp_authorized_keys_path is string
+      - proxmox_lxc_ssh_bootstrap_tmp_authorized_keys_path is match('^/')
+      - proxmox_lxc_ssh_bootstrap_authorized_keys is sequence
+      - proxmox_lxc_ssh_bootstrap_authorized_keys is not string
+      - proxmox_lxc_ssh_bootstrap_authorized_keys | reject('equalto', '') | list | length > 0
+
+- name: Confirm target LXC exists on the Proxmox host
+  ansible.builtin.command:
+    argv:
+      - pct
+      - status
+      - "{{ proxmox_lxc_ssh_bootstrap_ctid | string }}"
+  changed_when: false
+
+- name: Ensure required Alpine SSH packages are present in the LXC
+  ansible.builtin.command:
+    argv:
+      - pct
+      - exec
+      - "{{ proxmox_lxc_ssh_bootstrap_ctid | string }}"
+      - --
+      - apk
+      - add
+      - --no-cache
+      - openssh
+      - python3
+  changed_when: true
+
+- name: Ensure root SSH directory exists in the LXC
+  ansible.builtin.command:
+    argv:
+      - pct
+      - exec
+      - "{{ proxmox_lxc_ssh_bootstrap_ctid | string }}"
+      - --
+      - mkdir
+      - -p
+      - /root/.ssh
+  changed_when: false
+
+- name: Ensure root SSH directory permissions are correct in the LXC
+  ansible.builtin.command:
+    argv:
+      - pct
+      - exec
+      - "{{ proxmox_lxc_ssh_bootstrap_ctid | string }}"
+      - --
+      - chmod
+      - '700'
+      - /root/.ssh
+  changed_when: false
+
+- name: Render bootstrap authorized_keys file on the Proxmox host
+  ansible.builtin.copy:
+    dest: "{{ proxmox_lxc_ssh_bootstrap_tmp_authorized_keys_path }}"
+    content: "{{ proxmox_lxc_ssh_bootstrap_authorized_keys | reject('equalto', '') | join('\n') }}\n"
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Push bootstrap authorized_keys into the LXC root account
+  ansible.builtin.command:
+    argv:
+      - pct
+      - push
+      - "{{ proxmox_lxc_ssh_bootstrap_ctid | string }}"
+      - "{{ proxmox_lxc_ssh_bootstrap_tmp_authorized_keys_path }}"
+      - /root/.ssh/authorized_keys
+  changed_when: true
+
+- name: Ensure authorized_keys permissions are correct in the LXC
+  ansible.builtin.command:
+    argv:
+      - pct
+      - exec
+      - "{{ proxmox_lxc_ssh_bootstrap_ctid | string }}"
+      - --
+      - chmod
+      - '600'
+      - /root/.ssh/authorized_keys
+  changed_when: false
+
+- name: Remove temporary bootstrap authorized_keys file from the Proxmox host
+  ansible.builtin.file:
+    path: "{{ proxmox_lxc_ssh_bootstrap_tmp_authorized_keys_path }}"
+    state: absent
+
+- name: Ensure sshd runlevel is enabled in the LXC
+  ansible.builtin.command:
+    argv:
+      - pct
+      - exec
+      - "{{ proxmox_lxc_ssh_bootstrap_ctid | string }}"
+      - --
+      - rc-update
+      - add
+      - sshd
+      - default
+  changed_when: true
+
+- name: Start sshd in the LXC
+  ansible.builtin.command:
+    argv:
+      - pct
+      - exec
+      - "{{ proxmox_lxc_ssh_bootstrap_ctid | string }}"
+      - --
+      - rc-service
+      - sshd
+      - start
+  changed_when: true

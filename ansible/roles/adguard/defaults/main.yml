@@ -1,0 +1,43 @@
+---
+# Safe, overridable defaults for a deterministic Alpine/OpenRC AdGuard Home role.
+# Keep secrets and restored runtime state outside git-tracked defaults.
+adguard_version: '0.107.73'
+adguard_architecture_map:
+  x86_64: amd64
+  aarch64: arm64
+  armv7l: armv7
+adguard_release_architecture: "{{ adguard_architecture_map.get(ansible_facts['architecture'], ansible_facts['architecture']) }}"
+adguard_archive_name: "AdGuardHome_linux_{{ adguard_release_architecture }}.tar.gz"
+adguard_archive_url: "https://github.com/AdguardTeam/AdGuardHome/releases/download/v{{ adguard_version }}/{{ adguard_archive_name }}"
+# Prefer setting a release checksum from external vars for stricter supply-chain verification.
+adguard_archive_sha256: ''
+adguard_archive_path: "/var/tmp/{{ adguard_archive_name }}"
+adguard_required_packages:
+  - ca-certificates
+  - tar
+adguard_install_root: /opt
+adguard_install_dir: "{{ adguard_install_root }}/AdGuardHome"
+adguard_binary_path: "{{ adguard_install_dir }}/AdGuardHome"
+adguard_version_marker_path: "{{ adguard_install_dir }}/.installed-version"
+adguard_service_name: AdGuardHome
+adguard_service_enabled: true
+adguard_service_state: started
+adguard_service_runlevel: default
+adguard_service_reinstall: false
+adguard_require_config_for_start: true
+adguard_config_dir: /etc/adguardhome
+adguard_config_path: "{{ adguard_config_dir }}/AdGuardHome.yaml"
+adguard_work_dir: /var/lib/adguardhome
+adguard_import_dir: /var/lib/adguard/import
+adguard_restore_config_source_path: "{{ adguard_import_dir }}/AdGuardHome.yaml"
+adguard_restore_config_mode: '0600'
+adguard_restore_import_enabled: false
+adguard_restore_runtime_files_enabled: false
+adguard_restore_runtime_files:
+  - source_path: "{{ adguard_import_dir }}/data/leases.json"
+    relative_path: data/leases.json
+    mode: '0600'
+adguard_temp_validation_mode: false
+adguard_temp_validation_ip: ''
+adguard_production_ip: ''
+adguard_disable_dhcp_during_validation: true

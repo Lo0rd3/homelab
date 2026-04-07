@@ -348,3 +348,188 @@ variable "lxc_os_type" {
   type        = string
   default     = "unmanaged"
 }
+
+variable "adguard_lxc_vm_id" {
+  description = "Explicit VMID for the AdGuard migration LXC guest."
+  type        = number
+  default     = 202
+
+  validation {
+    condition     = var.adguard_lxc_vm_id > 0
+    error_message = "adguard_lxc_vm_id must be greater than 0."
+  }
+}
+
+variable "adguard_lxc_hostname" {
+  description = "Hostname for the AdGuard migration LXC."
+  type        = string
+  default     = "adguard-01"
+
+  validation {
+    condition     = length(trimspace(var.adguard_lxc_hostname)) > 0
+    error_message = "adguard_lxc_hostname must not be empty."
+  }
+}
+
+variable "adguard_lxc_template_file_id" {
+  description = "Template file ID for the AdGuard Alpine LXC image."
+  type        = string
+  default     = "local:vztmpl/alpine-3.23-default_20260116_amd64.tar.xz"
+
+  validation {
+    condition     = length(trimspace(var.adguard_lxc_template_file_id)) > 0
+    error_message = "adguard_lxc_template_file_id must not be empty."
+  }
+}
+
+variable "adguard_lxc_datastore_id" {
+  description = "Datastore for the AdGuard LXC disk."
+  type        = string
+  default     = "local"
+
+  validation {
+    condition     = length(trimspace(var.adguard_lxc_datastore_id)) > 0
+    error_message = "adguard_lxc_datastore_id must not be empty."
+  }
+}
+
+variable "adguard_lxc_bridge" {
+  description = "Bridge for the AdGuard LXC network interface."
+  type        = string
+  default     = "vmbr0"
+
+  validation {
+    condition     = length(trimspace(var.adguard_lxc_bridge)) > 0
+    error_message = "adguard_lxc_bridge must not be empty."
+  }
+}
+
+variable "adguard_lxc_cpu_cores" {
+  description = "CPU cores for the AdGuard LXC."
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = var.adguard_lxc_cpu_cores >= 1
+    error_message = "adguard_lxc_cpu_cores must be at least 1."
+  }
+}
+
+variable "adguard_lxc_memory_mb" {
+  description = "Memory in MiB for the AdGuard LXC."
+  type        = number
+  default     = 512
+
+  validation {
+    condition     = var.adguard_lxc_memory_mb >= 128
+    error_message = "adguard_lxc_memory_mb must be at least 128."
+  }
+}
+
+variable "adguard_lxc_swap_mb" {
+  description = "Swap in MiB for the AdGuard LXC."
+  type        = number
+  default     = 512
+
+  validation {
+    condition     = var.adguard_lxc_swap_mb >= 0
+    error_message = "adguard_lxc_swap_mb cannot be negative."
+  }
+}
+
+variable "adguard_lxc_disk_size_gb" {
+  description = "Disk size in GiB for the AdGuard LXC."
+  type        = number
+  default     = 6
+
+  validation {
+    condition     = var.adguard_lxc_disk_size_gb >= 1
+    error_message = "adguard_lxc_disk_size_gb must be at least 1."
+  }
+}
+
+variable "adguard_lxc_network_interface_name" {
+  description = "Primary interface name for the AdGuard LXC."
+  type        = string
+  default     = "eth0"
+}
+
+variable "adguard_lxc_ipv4_address" {
+  description = "IPv4 address for the AdGuard LXC."
+  type        = string
+  default     = "192.168.1.252/24"
+
+  validation {
+    condition     = can(regex(".+/.+", var.adguard_lxc_ipv4_address))
+    error_message = "adguard_lxc_ipv4_address must be a CIDR-style IPv4 address like 192.168.1.252/24."
+  }
+}
+
+variable "adguard_lxc_ipv4_gateway" {
+  description = "IPv4 gateway for the AdGuard LXC."
+  type        = string
+  default     = "192.168.1.254"
+
+  validation {
+    condition     = length(trimspace(var.adguard_lxc_ipv4_gateway)) > 0
+    error_message = "adguard_lxc_ipv4_gateway must not be empty."
+  }
+}
+
+variable "adguard_lxc_dns_servers" {
+  description = "DNS servers for the AdGuard LXC."
+  type        = list(string)
+  default     = ["212.55.154.174"]
+
+  validation {
+    condition     = length(var.adguard_lxc_dns_servers) > 0 && alltrue([for server in var.adguard_lxc_dns_servers : length(trimspace(server)) > 0])
+    error_message = "adguard_lxc_dns_servers must contain at least one non-empty DNS server address."
+  }
+}
+
+variable "adguard_lxc_ssh_public_keys" {
+  description = "SSH public keys injected into the AdGuard LXC for management access."
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition     = alltrue([for key in var.adguard_lxc_ssh_public_keys : length(trimspace(key)) > 0])
+    error_message = "adguard_lxc_ssh_public_keys entries must not be empty."
+  }
+}
+
+variable "adguard_lxc_started" {
+  description = "Whether the AdGuard LXC should start after creation."
+  type        = bool
+  default     = true
+}
+
+variable "adguard_lxc_start_on_boot" {
+  description = "Whether the AdGuard LXC should start on node boot."
+  type        = bool
+  default     = true
+}
+
+variable "adguard_lxc_unprivileged" {
+  description = "Whether the AdGuard LXC should be unprivileged."
+  type        = bool
+  default     = true
+}
+
+variable "adguard_lxc_description" {
+  description = "Optional description for the AdGuard LXC."
+  type        = string
+  default     = "AdGuard Home migration LXC"
+}
+
+variable "adguard_lxc_tags" {
+  description = "Optional lowercase tags for the AdGuard LXC."
+  type        = list(string)
+  default     = ["adguard", "dns", "dhcp"]
+}
+
+variable "adguard_lxc_os_type" {
+  description = "Container operating system type for the AdGuard LXC."
+  type        = string
+  default     = "alpine"
+}

@@ -1,0 +1,13 @@
+---
+galaxy_info:
+  role_name: proxmox_lxc_ssh_bootstrap
+  author: homelab-repo
+  description: Bootstrap SSH and Python inside a fresh Alpine LXC from the Proxmox host so normal Ansible access can begin.
+  license: MIT
+  min_ansible_version: '2.14'
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+
+dependencies: []

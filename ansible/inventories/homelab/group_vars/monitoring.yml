@@ -30,6 +30,7 @@ monitoring_node_exporter_image: prom/node-exporter
 monitoring_node_exporter_image_tag: v1.9.0
 monitoring_prometheus_extra_node_exporter_targets:
   - 192.168.1.2:9100
+  - 192.168.1.252:9100
 
 monitoring_cadvisor_enabled: true
 monitoring_cadvisor_image: gcr.io/cadvisor/cadvisor
