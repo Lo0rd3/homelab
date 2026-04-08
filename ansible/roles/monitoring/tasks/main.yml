@@ -2,15 +2,9 @@
 - name: Validate monitoring role inputs
   ansible.builtin.assert:
     quiet: true
-    fail_msg: Monitoring role variables must use the documented types and keep runtime secrets external.
+    fail_msg: Monitoring role inputs must use absolute paths, keep Compose file names relative, and inject secrets from outside tracked defaults.
     that:
       - monitoring_stack_enabled is boolean
-      - monitoring_stack_name is string
-      - monitoring_stack_name | length > 0
-      - monitoring_compose_project_name is string
-      - monitoring_compose_project_name | length > 0
-      - monitoring_compose_project_src is string
-      - monitoring_compose_project_src | length > 0
       - monitoring_compose_project_src is match('^/')
       - monitoring_compose_files is sequence
       - monitoring_compose_files is not string
@@ -18,24 +12,12 @@
       - monitoring_compose_env_files is sequence
       - monitoring_compose_env_files is not string
       - monitoring_compose_env_files | length > 0
-      - monitoring_config_root is string
-      - monitoring_config_root | length > 0
       - monitoring_config_root is match('^/')
-      - monitoring_data_root is string
-      - monitoring_data_root | length > 0
       - monitoring_data_root is match('^/')
-      - monitoring_runtime_secrets_root is string
-      - monitoring_runtime_secrets_root | length > 0
       - monitoring_runtime_secrets_root is match('^/')
-      - monitoring_grafana_admin_password_file is string
-      - monitoring_grafana_admin_password_file | length > 0
       - monitoring_grafana_admin_password_file is match('^/')
-      - monitoring_directories is sequence
-      - monitoring_directories is not string
       - monitoring_managed_templates is sequence
       - monitoring_managed_templates is not string
-      - monitoring_dashboard_files is sequence
-      - monitoring_dashboard_files is not string
       - monitoring_compose_deploy is boolean
       - monitoring_required_secret_variables is sequence
       - monitoring_required_secret_variables is not string

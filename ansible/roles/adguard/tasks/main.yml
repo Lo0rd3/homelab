@@ -2,44 +2,28 @@
 - name: Validate adguard role inputs
   ansible.builtin.assert:
     quiet: true
-    fail_msg: AdGuard role expects Alpine/OpenRC hosts plus explicit absolute paths for deterministic config and work directories.
+    fail_msg: AdGuard role expects Alpine/OpenRC hosts plus explicit absolute paths for config, work, and staged restore inputs.
     that:
       - ansible_facts['distribution'] == 'Alpine'
       - ansible_facts['service_mgr'] == 'openrc'
       - adguard_version is string
       - adguard_version | length > 0
-      - adguard_archive_url is string
-      - adguard_archive_url | length > 0
-      - adguard_archive_sha256 is string
       - adguard_archive_path is string
       - adguard_archive_path is match('^/')
       - adguard_required_packages is sequence
       - adguard_required_packages is not string
-      - adguard_install_root is string
       - adguard_install_root is match('^/')
-      - adguard_install_dir is string
       - adguard_install_dir is match('^/')
-      - adguard_binary_path is string
       - adguard_binary_path is match('^/')
-      - adguard_version_marker_path is string
       - adguard_version_marker_path is match('^/')
-      - adguard_service_name is string
-      - adguard_service_name | length > 0
       - adguard_service_enabled is boolean
       - adguard_service_state in ['started', 'stopped']
-      - adguard_service_runlevel is string
-      - adguard_service_runlevel | length > 0
       - adguard_service_reinstall is boolean
       - adguard_require_config_for_start is boolean
-      - adguard_config_dir is string
       - adguard_config_dir is match('^/')
-      - adguard_config_path is string
       - adguard_config_path is match('^/')
-      - adguard_work_dir is string
       - adguard_work_dir is match('^/')
-      - adguard_import_dir is string
       - adguard_import_dir is match('^/')
-      - adguard_restore_config_source_path is string
       - adguard_restore_config_source_path is match('^/')
       - adguard_restore_import_enabled is boolean
       - adguard_restore_runtime_files_enabled is boolean
