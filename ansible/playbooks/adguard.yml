@@ -13,7 +13,7 @@
   vars:
     proxmox_lxc_ssh_bootstrap_ctid: "{{ adguard_proxmox_lxc_ssh_bootstrap_ctid }}"
     proxmox_lxc_ssh_bootstrap_authorized_keys:
-      - "{{ hostvars['adguard-01'].adguard_ssh_bootstrap_public_key }}"
+      - "{{ adguard_ssh_bootstrap_public_key }}"
   roles:
     - role: proxmox_lxc_ssh_bootstrap
 

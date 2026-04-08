@@ -2,7 +2,6 @@
 # Host-specific values for adguard-01.
 ansible_user: root
 ansible_python_interpreter: /usr/bin/python3
-adguard_ssh_bootstrap_public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM34gVclhaJxjr9fcQgOr80g6SvGf1LH3+88axdfnsPY lo0@N0ID"
 
 # Expose lightweight host metrics to the monitoring VM.
 node_exporter_web_listen_host: 0.0.0.0
