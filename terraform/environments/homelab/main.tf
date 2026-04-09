@@ -1,72 +1,48 @@
-module "vm" {
-  source = "../../modules/vm"
+module "vms" {
+  for_each = var.vms
+  source   = "../../modules/vm"
 
   node_name               = var.target_node_name
-  guest_name              = var.vm_name
-  clone_source_vm_id      = var.vm_clone_source_vm_id
-  cpu_cores               = var.vm_cpu_cores
-  memory_mb               = var.vm_memory_mb
-  disk_datastore_id       = var.vm_datastore_id
-  disk_size_gb            = var.vm_disk_size_gb
-  bridge                  = var.vm_bridge
-  full_clone              = var.vm_full_clone
-  network_model           = var.vm_network_model
-  network_vlan_tag        = var.vm_vlan_tag
-  cloud_init_datastore_id = var.vm_cloud_init_datastore_id
-  user_name               = var.vm_user
-  ssh_public_keys         = var.vm_ssh_public_keys
-  ipv4_address            = var.vm_ipv4_address
-  ipv4_gateway            = var.vm_ipv4_gateway
+  guest_name              = each.value.guest_name
+  clone_source_vm_id      = each.value.clone_source_vm_id
+  cpu_cores               = each.value.cpu_cores
+  memory_mb               = each.value.memory_mb
+  disk_datastore_id       = each.value.disk_datastore_id
+  disk_size_gb            = each.value.disk_size_gb
+  bridge                  = each.value.bridge
+  full_clone              = each.value.full_clone
+  network_model           = each.value.network_model
+  network_vlan_tag        = each.value.network_vlan_tag
+  cloud_init_datastore_id = each.value.cloud_init_datastore_id
+  user_name               = each.value.user_name
+  ssh_public_keys         = each.value.ssh_public_keys
+  ipv4_address            = each.value.ipv4_address
+  ipv4_gateway            = each.value.ipv4_gateway
 }
 
-module "lxc" {
-  source = "../../modules/lxc"
+module "lxcs" {
+  for_each = var.lxcs
+  source   = "../../modules/lxc"
 
   node_name              = var.target_node_name
-  vm_id                  = var.lxc_vm_id
-  hostname               = var.lxc_hostname
-  template_file_id       = var.lxc_template_file_id
-  cpu_cores              = var.lxc_cpu_cores
-  memory_mb              = var.lxc_memory_mb
-  swap_mb                = var.lxc_swap_mb
-  disk_datastore_id      = var.lxc_datastore_id
-  disk_size_gb           = var.lxc_disk_size_gb
-  bridge                 = var.lxc_bridge
-  network_interface_name = var.lxc_network_interface_name
-  ipv4_address           = var.lxc_ipv4_address
-  ipv4_gateway           = var.lxc_ipv4_gateway
-  dns_servers            = var.lxc_dns_servers
-  ssh_public_keys        = var.lxc_ssh_public_keys
-  started                = var.lxc_started
-  start_on_boot          = var.lxc_start_on_boot
-  unprivileged           = var.lxc_unprivileged
-  description            = var.lxc_description
-  tags                   = var.lxc_tags
-  os_type                = var.lxc_os_type
-}
-
-module "adguard_lxc" {
-  source = "../../modules/lxc"
-
-  node_name              = var.target_node_name
-  vm_id                  = var.adguard_lxc_vm_id
-  hostname               = var.adguard_lxc_hostname
-  template_file_id       = var.adguard_lxc_template_file_id
-  cpu_cores              = var.adguard_lxc_cpu_cores
-  memory_mb              = var.adguard_lxc_memory_mb
-  swap_mb                = var.adguard_lxc_swap_mb
-  disk_datastore_id      = var.adguard_lxc_datastore_id
-  disk_size_gb           = var.adguard_lxc_disk_size_gb
-  bridge                 = var.adguard_lxc_bridge
-  network_interface_name = var.adguard_lxc_network_interface_name
-  ipv4_address           = var.adguard_lxc_ipv4_address
-  ipv4_gateway           = var.adguard_lxc_ipv4_gateway
-  dns_servers            = var.adguard_lxc_dns_servers
-  ssh_public_keys        = var.adguard_lxc_ssh_public_keys
-  started                = var.adguard_lxc_started
-  start_on_boot          = var.adguard_lxc_start_on_boot
-  unprivileged           = var.adguard_lxc_unprivileged
-  description            = var.adguard_lxc_description
-  tags                   = var.adguard_lxc_tags
-  os_type                = var.adguard_lxc_os_type
+  vm_id                  = each.value.vm_id
+  hostname               = each.value.hostname
+  template_file_id       = each.value.template_file_id
+  cpu_cores              = each.value.cpu_cores
+  memory_mb              = each.value.memory_mb
+  swap_mb                = each.value.swap_mb
+  disk_datastore_id      = each.value.disk_datastore_id
+  disk_size_gb           = each.value.disk_size_gb
+  bridge                 = each.value.bridge
+  network_interface_name = each.value.network_interface_name
+  ipv4_address           = each.value.ipv4_address
+  ipv4_gateway           = each.value.ipv4_gateway
+  dns_servers            = each.value.dns_servers
+  ssh_public_keys        = each.value.ssh_public_keys
+  started                = each.value.started
+  start_on_boot          = each.value.start_on_boot
+  unprivileged           = each.value.unprivileged
+  description            = each.value.description
+  tags                   = each.value.tags
+  os_type                = each.value.os_type
 }

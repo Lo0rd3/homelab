@@ -1,49 +1,23 @@
-output "vm_id" {
-  description = "Terraform identifier for the example VM scaffold."
-  value       = module.vm.id
+output "vms" {
+  description = "Summary of the VM workloads managed by this environment."
+  value = {
+    for name, instance in module.vms : name => {
+      id         = instance.id
+      guest_name = instance.guest_name
+      node_name  = instance.node_name
+    }
+  }
 }
 
-output "vm_name" {
-  description = "Guest name used by the example VM scaffold."
-  value       = module.vm.guest_name
-}
-
-output "lxc_id" {
-  description = "Terraform identifier for the example LXC scaffold."
-  value       = module.lxc.id
-}
-
-output "lxc_vmid" {
-  description = "Assigned VMID for the example LXC scaffold."
-  value       = module.lxc.vm_id
-}
-
-output "lxc_ipv4" {
-  description = "IPv4 data reported by Proxmox for the example LXC scaffold."
-  value       = module.lxc.ipv4
-}
-
-output "lxc_hostname" {
-  description = "Hostname used by the current homelab LXC service guest."
-  value       = var.lxc_hostname
-}
-
-output "adguard_lxc_id" {
-  description = "Terraform identifier for the AdGuard migration LXC."
-  value       = module.adguard_lxc.id
-}
-
-output "adguard_lxc_vmid" {
-  description = "Assigned VMID for the AdGuard migration LXC."
-  value       = module.adguard_lxc.vm_id
-}
-
-output "adguard_lxc_ipv4" {
-  description = "IPv4 data reported by Proxmox for the AdGuard migration LXC."
-  value       = module.adguard_lxc.ipv4
-}
-
-output "adguard_lxc_hostname" {
-  description = "Hostname used by the AdGuard migration LXC."
-  value       = var.adguard_lxc_hostname
+output "lxcs" {
+  description = "Summary of the LXC services managed by this environment."
+  value = {
+    for name, instance in module.lxcs : name => {
+      id        = instance.id
+      vm_id     = instance.vm_id
+      node_name = instance.node_name
+      hostname  = var.lxcs[name].hostname
+      ipv4      = instance.ipv4
+    }
+  }
 }

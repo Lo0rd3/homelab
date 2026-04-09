@@ -1,71 +1,73 @@
 proxmox_endpoint = "https://pve.example.internal:8006/"
 proxmox_insecure = true
 
-target_node_name = "pve1"
+target_node_name = "prox"
 
-vm_name               = "monitoring-01"
-vm_clone_source_vm_id = 9000
-vm_datastore_id       = "local-lvm"
-vm_bridge             = "vmbr0"
-vm_cpu_cores          = 2
-vm_memory_mb          = 4096
-vm_disk_size_gb       = 32
-vm_full_clone         = true
-vm_network_model      = "virtio"
-vm_vlan_tag           = 20
-vm_cloud_init_datastore_id = "local"
-vm_user               = "debian"
-vm_ssh_public_keys    = [
-  "ssh-ed25519 replace-me"
-]
-vm_ipv4_address       = "dhcp"
-vm_ipv4_gateway       = null
+vms = {
+  monitoring = {
+    guest_name              = "monitoring-01"
+    clone_source_vm_id      = 9001
+    disk_datastore_id       = "local-lvm"
+    bridge                  = "vmbr0"
+    cpu_cores               = 2
+    memory_mb               = 4096
+    disk_size_gb            = 32
+    full_clone              = true
+    network_model           = "virtio"
+    network_vlan_tag        = 20
+    cloud_init_datastore_id = "local"
+    user_name               = "debian"
+    ssh_public_keys = [
+      "ssh-ed25519 replace-me"
+    ]
+    ipv4_address = "dhcp"
+    ipv4_gateway = null
+  }
+}
 
-lxc_vm_id                  = 201
-lxc_hostname               = "tailscale-01"
-lxc_template_file_id       = "local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst"
-lxc_datastore_id           = "local"
-lxc_bridge                 = "vmbr0"
-lxc_cpu_cores              = 1
-lxc_memory_mb              = 1024
-lxc_swap_mb                = 256
-lxc_disk_size_gb           = 6
-lxc_network_interface_name = "eth0"
-lxc_ipv4_address           = "192.168.1.2/24"
-lxc_ipv4_gateway           = "192.168.1.254"
-lxc_dns_servers            = ["192.168.1.252"]
-lxc_ssh_public_keys        = [
-  "ssh-ed25519 replace-me"
-]
-lxc_started                = true
-lxc_start_on_boot          = true
-lxc_unprivileged           = true
-lxc_description            = "Tailscale subnet router and exit node"
-lxc_tags                   = ["tailscale", "router", "remote-access"]
-lxc_os_type                = "debian"
+lxcs = {
+  tailscale = {
+    vm_id            = 201
+    hostname         = "tailscale-01"
+    template_file_id = "local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst"
+    disk_datastore_id = "local"
+    bridge           = "vmbr0"
+    cpu_cores        = 1
+    memory_mb        = 1024
+    swap_mb          = 256
+    disk_size_gb     = 6
+    ipv4_address     = "192.168.1.2/24"
+    ipv4_gateway     = "192.168.1.254"
+    dns_servers      = ["192.168.1.252"]
+    ssh_public_keys = [
+      "ssh-ed25519 replace-me"
+    ]
+    description = "Tailscale subnet router and exit node"
+    tags        = ["tailscale", "router", "remote-access"]
+    os_type     = "debian"
+  }
 
-adguard_lxc_vm_id                  = 202
-adguard_lxc_hostname               = "adguard-01"
-adguard_lxc_template_file_id       = "local:vztmpl/alpine-3.23-default_20260116_amd64.tar.xz"
-adguard_lxc_datastore_id           = "local"
-adguard_lxc_bridge                 = "vmbr0"
-adguard_lxc_cpu_cores              = 1
-adguard_lxc_memory_mb              = 512
-adguard_lxc_swap_mb                = 512
-adguard_lxc_disk_size_gb           = 6
-adguard_lxc_network_interface_name = "eth0"
-adguard_lxc_ipv4_address           = "192.168.1.252/24"
-adguard_lxc_ipv4_gateway           = "192.168.1.254"
-adguard_lxc_dns_servers            = ["212.55.154.174"]
-adguard_lxc_ssh_public_keys        = [
-  "ssh-ed25519 replace-me"
-]
-adguard_lxc_started                = true
-adguard_lxc_start_on_boot          = true
-adguard_lxc_unprivileged           = true
-adguard_lxc_description            = "AdGuard Home migration LXC"
-adguard_lxc_tags                   = ["adguard", "dns", "dhcp"]
-adguard_lxc_os_type                = "alpine"
+  adguard = {
+    vm_id            = 202
+    hostname         = "adguard-01"
+    template_file_id = "local:vztmpl/alpine-3.23-default_20260116_amd64.tar.xz"
+    disk_datastore_id = "local"
+    bridge           = "vmbr0"
+    cpu_cores        = 1
+    memory_mb        = 512
+    swap_mb          = 512
+    disk_size_gb     = 6
+    ipv4_address     = "192.168.1.252/24"
+    ipv4_gateway     = "192.168.1.254"
+    dns_servers      = ["212.55.154.174"]
+    ssh_public_keys = [
+      "ssh-ed25519 replace-me"
+    ]
+    description = "AdGuard Home instance"
+    tags        = ["adguard", "dns", "dhcp"]
+    os_type     = "alpine"
+  }
+}
 
 # Export credentials instead of committing them:
 #   export PROXMOX_VE_API_TOKEN="set-this-in-your-shell"
