@@ -11,6 +11,12 @@
   roles:
     - role: docker
 
+- name: Apply Nginx reverse proxy role to proxy hosts
+  hosts: proxy
+  become: true
+  roles:
+    - role: nginx
+
 - name: Bootstrap Python on Alpine hosts
   hosts: alpine
   become: true

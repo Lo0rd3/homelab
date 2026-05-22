@@ -1,0 +1,46 @@
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name {% for vhost in nginx_vhosts %}{{ vhost.server_name }} {% endfor %};
+
+    return 301 https://$host$request_uri;
+}
+
+{% for vhost in nginx_vhosts %}
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name {{ vhost.server_name }};
+
+    ssl_certificate {{ nginx_tls_certificate_path }};
+    ssl_certificate_key {{ nginx_tls_private_key_path }};
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+
+    location / {
+        proxy_pass {{ vhost.upstream_url }};
+        proxy_http_version {{ vhost.proxy_http_version | default('1.1') }};
+        proxy_set_header Host {{ vhost.proxy_host | default('$host') }};
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Host {{ vhost.x_forwarded_host | default('$host') }};
+        proxy_set_header X-Forwarded-Proto {{ vhost.x_forwarded_proto | default('https') }};
+        proxy_redirect off;
+{% if vhost.websocket | default(false) %}
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_read_timeout 300s;
+{% endif %}
+{% if vhost.proxy_ssl_server_name | default(false) %}
+        proxy_ssl_server_name on;
+        proxy_ssl_name {{ vhost.proxy_ssl_name | default(vhost.proxy_host) }};
+{% endif %}
+    }
+}
+
+{% endfor %}

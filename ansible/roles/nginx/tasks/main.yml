@@ -1,0 +1,102 @@
+---
+- name: Validate Nginx role inputs
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: Nginx role expects Debian 12, absolute TLS secret paths, and a list of vhost definitions with server_name and upstream_url.
+    that:
+      - ansible_facts["distribution"] == 'Debian'
+      - ansible_facts["distribution_major_version"] == '12'
+      - nginx_vhosts is sequence
+      - nginx_vhosts is not string
+      - nginx_vhosts | length > 0
+      - nginx_vhosts | map(attribute='server_name') | list | length == nginx_vhosts | length
+      - nginx_vhosts | map(attribute='upstream_url') | list | length == nginx_vhosts | length
+      - nginx_tls_secret_directory is string
+      - nginx_tls_secret_directory is match('^/')
+      - nginx_tls_certificate_path is string
+      - nginx_tls_certificate_path is match('^/')
+      - nginx_tls_private_key_path is string
+      - nginx_tls_private_key_path is match('^/')
+
+- name: Ensure Nginx TLS secrets directory exists
+  ansible.builtin.file:
+    path: "{{ nginx_tls_secret_directory }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0750'
+
+- name: Check Nginx TLS certificate file exists
+  ansible.builtin.stat:
+    path: "{{ nginx_tls_certificate_path }}"
+  register: nginx_tls_certificate_stat
+
+- name: Check Nginx TLS private key file exists
+  ansible.builtin.stat:
+    path: "{{ nginx_tls_private_key_path }}"
+  register: nginx_tls_private_key_stat
+
+- name: Assert Nginx TLS files are present on host
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: >-
+      Nginx TLS files are missing on the host. Install the local certificate and key before running this role.
+      Expected {{ nginx_tls_certificate_path }} and {{ nginx_tls_private_key_path }}.
+    that:
+      - nginx_tls_certificate_stat.stat.exists
+      - nginx_tls_certificate_stat.stat.isreg
+      - nginx_tls_private_key_stat.stat.exists
+      - nginx_tls_private_key_stat.stat.isreg
+
+- name: Enforce Nginx TLS certificate permissions
+  ansible.builtin.file:
+    path: "{{ nginx_tls_certificate_path }}"
+    state: file
+    owner: root
+    group: root
+    mode: '0640'
+
+- name: Enforce Nginx TLS private key permissions
+  ansible.builtin.file:
+    path: "{{ nginx_tls_private_key_path }}"
+    state: file
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Ensure Nginx package is present
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Disable default Nginx site
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+
+- name: Render homelab reverse proxy vhosts
+  ansible.builtin.template:
+    src: reverse-proxy.conf.j2
+    dest: /etc/nginx/conf.d/homelab-proxy.conf
+    owner: root
+    group: root
+    mode: '0644'
+  register: nginx_proxy_config
+
+- name: Validate Nginx configuration
+  ansible.builtin.command: nginx -t
+  changed_when: false
+
+- name: Ensure Nginx service is enabled and started
+  ansible.builtin.service:
+    name: nginx
+    enabled: true
+    state: started
+
+- name: Reload Nginx when reverse proxy config changes
+  ansible.builtin.service:
+    name: nginx
+    state: reloaded
+  when: nginx_proxy_config.changed
