@@ -1,0 +1,36 @@
+docs/notes/*
+ansible/README.md
+
+# local temp work
+.tmp/
+
+# terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.jsone
+*.tfvars
+*.tfvars.*
+*.tfvars.json
+*.auto.tfvars.json
+!*.tfvars.example
+
+# env files
+.env
+.env.*
+!.env.example
+
+# ansible
+*.retry
+
+# editor and os files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo

@@ -30,6 +30,7 @@ I try to keep the split clear:
 - `monitoring-01` for the monitoring stack
 - `tailscale-01` for subnet routing and exit-node access
 - `adguard-01` for AdGuard Home
+- `proxy-01` for the shared LAN-only reverse proxy for local `.idios` names
 
 ## Repo layout
 
@@ -61,5 +62,13 @@ Typical flow:
 2. apply infrastructure changes with Terraform
 3. run Ansible from `ansible/` to configure the hosts
 4. validate service health with the relevant runbooks
+
+Useful operator docs:
+
+- `docs/runbooks/platform-operations.md` for the repo-wide flow
+- `docs/runbooks/monitoring-01.md` for the monitoring VM
+- `docs/runbooks/tailscale-01.md` for the Tailscale router LXC
+- `docs/runbooks/adguard-01.md` for the AdGuard LXC
+- `docs/runbooks/proxy-01.md` for the reverse proxy host
 
 This repo is still evolving as I move more of my regular homelab services into it, but I want the structure to stay steady as the lab grows.
