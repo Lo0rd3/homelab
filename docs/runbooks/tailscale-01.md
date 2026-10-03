@@ -72,11 +72,26 @@ ansible-playbook playbooks/site.yml --syntax-check
 
 The TUN setup is a root-only Proxmox host step, so it is handled by Ansible on the Proxmox host instead of Terraform.
 
-On the first join, pass the auth key from an external secret input:
+On the first join, place the auth key in a protected external extra-vars file.
+Keep it outside the repository and owner-only, for example
+`$HOME/.config/homelab/tailscale-recovery-secrets.yml`:
+
+```bash
+install -d -m 0700 "$HOME/.config/homelab"
+install -m 0600 /dev/null "$HOME/.config/homelab/tailscale-recovery-secrets.yml"
+```
+
+Edit that file from the approved secret source:
+
+```yaml
+tailscale_auth_key: <new-tailscale-auth-key>
+```
+
+Then reference the file rather than passing the key on the command line:
 
 ```bash
 ansible-playbook playbooks/tailscale.yml --limit prox,tailscale-01 \
-  -e "tailscale_auth_key=tskey-example-replace-me"
+  --extra-vars "@$HOME/.config/homelab/tailscale-recovery-secrets.yml"
 ```
 
 This playbook applies the full setup at once:
@@ -136,7 +151,8 @@ Then on a remote client:
 ## 9. Recovery
 
 If Tailscale loses auth:
-- rerun the Tailscale playbook with a fresh auth key
+- replace the key in the protected external extra-vars file, then rerun the
+  Tailscale playbook
 
 If routes or exit-node ads stop working:
 - confirm the node is still advertising them with `tailscale status`
@@ -149,4 +165,5 @@ If monitoring is missing:
 ## 10. Related docs
 
 - `docs/runbooks/platform-operations.md` for repo-wide apply order
+- `docs/runbooks/manual-recovery.md` for full-platform recovery
 - `ansible/README.md` for playbook entrypoints

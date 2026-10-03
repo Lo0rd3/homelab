@@ -1,0 +1,38 @@
+---
+# Safe, non-secret defaults. Supply secret values from a vault, inventory
+# override, or another external secret source at execution time.
+backup_orchestrator_packages:
+  - restic
+  - openssh-client
+  - sqlite3
+backup_orchestrator_root_dir: /var/lib/homelab-backup
+backup_orchestrator_staging_dir: "{{ backup_orchestrator_root_dir }}/staging"
+backup_orchestrator_cache_dir: "{{ backup_orchestrator_root_dir }}/cache"
+backup_orchestrator_config_dir: /etc/homelab-backup
+backup_orchestrator_secrets_dir: "{{ backup_orchestrator_config_dir }}/secrets"
+backup_orchestrator_b2_credentials_path: "{{ backup_orchestrator_secrets_dir }}/backup-runtime.conf"
+backup_orchestrator_restic_password_path: "{{ backup_orchestrator_secrets_dir }}/restic-password"
+backup_orchestrator_ssh_private_key_path: "{{ backup_orchestrator_secrets_dir }}/id_ed25519"
+backup_orchestrator_targets_config_path: "{{ backup_orchestrator_config_dir }}/targets.yml"
+backup_orchestrator_known_hosts_path: "{{ backup_orchestrator_config_dir }}/known_hosts"
+backup_orchestrator_runner_path: /usr/local/sbin/homelab-backup-run
+backup_orchestrator_service_name: homelab-backup.service
+backup_orchestrator_timer_name: homelab-backup.timer
+backup_orchestrator_schedule: '*-*-* 02:00:00'
+backup_orchestrator_source_user: homelab-backup
+backup_orchestrator_metric_path: /var/lib/node_exporter/textfile_collector/homelab_backup.prom
+backup_orchestrator_max_artifact_bytes: 1073741824
+backup_orchestrator_service_timeout_seconds: 3600
+backup_orchestrator_ssh_connect_timeout_seconds: 15
+backup_orchestrator_ssh_server_alive_interval_seconds: 30
+backup_orchestrator_ssh_server_alive_count_max: 3
+backup_orchestrator_b2_bucket: ""
+backup_orchestrator_targets: []
+backup_orchestrator_known_hosts: []
+
+# Do not set these values in tracked vars. The role writes them to root-only
+# files so collection and Restic jobs can consume them without Git.
+backup_orchestrator_b2_account_id: ""
+backup_orchestrator_b2_account_key: ""
+backup_orchestrator_restic_password: ""
+backup_orchestrator_ssh_private_key: ""

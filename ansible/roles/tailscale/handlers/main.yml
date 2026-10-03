@@ -3,3 +3,7 @@
   ansible.builtin.service:
     name: "{{ tailscale_service_name }}"
     state: restarted
+
+- name: Refresh APT cache after adding Tailscale repository
+  ansible.builtin.apt:
+    update_cache: true

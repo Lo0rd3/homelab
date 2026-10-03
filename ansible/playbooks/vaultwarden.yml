@@ -1,0 +1,9 @@
+---
+- name: Configure Vaultwarden Docker hosts
+  hosts: vaultwarden
+  become: true
+  gather_facts: true
+  roles:
+    - role: docker
+    - role: vaultwarden_docker
+    - role: node_exporter

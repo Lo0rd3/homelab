@@ -1,4 +1,3 @@
-docs/notes/*
 ansible/README.md
 
 # local temp work
@@ -8,6 +7,8 @@ ansible/README.md
 **/.terraform/
 *.tfstate
 *.tfstate.*
+*.tfplan
+*.tfplan.*
 crash.log
 crash.*.log
 override.tf
@@ -27,6 +28,17 @@ override.tf.json
 
 # ansible
 *.retry
+homelab-backup-secrets.yml
+ansible/.ansible/
+
+# runtime secrets, TLS material, and restored backup state
+*.crt
+*.key
+*.pem
+*.p12
+*.pfx
+restore-*/
+restored-*/
 
 # editor and os files
 .DS_Store

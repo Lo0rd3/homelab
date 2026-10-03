@@ -152,7 +152,7 @@ variable "start_on_boot" {
 }
 
 variable "unprivileged" {
-  description = "Whether to create the container as unprivileged."
+  description = "Whether to create the container as unprivileged. Defaults to true; privileged containers require a documented workload exception."
   type        = bool
   default     = true
 }

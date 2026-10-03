@@ -1,5 +1,7 @@
 proxmox_endpoint = "https://pve.example.internal:8006/"
-proxmox_insecure = true
+
+# TLS certificate verification is enabled by default. For a self-signed local
+# Proxmox certificate only, explicitly set: proxmox_insecure = true
 
 target_node_name = "prox"
 
@@ -20,8 +22,28 @@ vms = {
     ssh_public_keys = [
       "ssh-ed25519 replace-me"
     ]
-    ipv4_address = "dhcp"
-    ipv4_gateway = null
+    ipv4_address = "192.168.1.87/24"
+    ipv4_gateway = "192.168.1.254"
+  }
+
+  backup = {
+    guest_name              = "backup-01"
+    clone_source_vm_id      = 9001
+    disk_datastore_id       = "local"
+    bridge                  = "vmbr0"
+    cpu_cores               = 2
+    memory_mb               = 2048
+    disk_size_gb            = 40
+    full_clone              = true
+    network_model           = "virtio"
+    network_vlan_tag        = null
+    cloud_init_datastore_id = "local"
+    user_name               = "debian"
+    ssh_public_keys = [
+      "ssh-ed25519 replace-me"
+    ]
+    ipv4_address = "192.168.1.4/24"
+    ipv4_gateway = "192.168.1.254"
   }
 
   proxy = {
@@ -42,6 +64,27 @@ vms = {
     ]
     ipv4_address = "192.168.1.3/24"
     ipv4_gateway = "192.168.1.254"
+  }
+
+  vaultwarden = {
+    vm_id                   = 101
+    guest_name              = "vaultwarden-01"
+    clone_source_vm_id      = 9001
+    disk_datastore_id       = "local"
+    bridge                  = "vmbr0"
+    cpu_cores               = 2
+    memory_mb               = 2048
+    disk_size_gb            = 20
+    full_clone              = true
+    network_model           = "virtio"
+    network_vlan_tag        = null
+    cloud_init_datastore_id = "local"
+    user_name               = "debian"
+    ipv4_address            = "192.168.1.5/24"
+    ipv4_gateway            = "192.168.1.254"
+    ssh_public_keys = [
+      "ssh-ed25519 replace-me"
+    ]
   }
 }
 
@@ -91,10 +134,11 @@ lxcs = {
     started       = true
     start_on_boot = true
     unprivileged  = true
-    description   = "AdGuard Home migration LXC"
+    description   = "AdGuard Home on an unprivileged LXC"
     tags          = ["adguard", "dns", "dhcp"]
     os_type       = "alpine"
   }
+
 }
 
 #   export PROXMOX_VE_API_TOKEN="set-this-in-your-shell"

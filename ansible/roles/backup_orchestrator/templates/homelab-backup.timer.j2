@@ -1,0 +1,10 @@
+[Unit]
+Description=Scheduled Homelab central Restic backup
+
+[Timer]
+OnCalendar={{ backup_orchestrator_schedule }}
+Persistent=true
+Unit={{ backup_orchestrator_service_name }}
+
+[Install]
+WantedBy=timers.target

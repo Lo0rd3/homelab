@@ -1,0 +1,14 @@
+---
+vaultwarden_docker_deploy: false
+vaultwarden_docker_compose_project_name: vaultwarden
+vaultwarden_docker_compose_directory: /opt/compose/vaultwarden
+vaultwarden_docker_compose_path: "{{ vaultwarden_docker_compose_directory }}/compose.yml"
+vaultwarden_docker_data_directory: /opt/vaultwarden/data
+vaultwarden_docker_runtime_directory: /etc/vaultwarden
+vaultwarden_docker_env_file: "{{ vaultwarden_docker_runtime_directory }}/secrets.env"
+vaultwarden_docker_image: vaultwarden/server:1.37.3
+vaultwarden_docker_domain: https://lo0orde.duckdns.org
+vaultwarden_docker_listen_address: 192.168.1.5
+vaultwarden_docker_port: 8000
+vaultwarden_docker_signups_allowed: false
+vaultwarden_docker_restart_policy: unless-stopped

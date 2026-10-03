@@ -1,0 +1,186 @@
+---
+- name: Validate backup source export role inputs
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: Backup source export requires one external SSH public key, safe absolute role paths, and at least one declared source.
+    that:
+      - backup_source_export_central_public_key is string
+      - backup_source_export_central_public_key is match('^(ssh-(ed25519|rsa)|ecdsa-sha2-)')
+      - backup_source_export_central_public_key is not search('[\r\n]')
+      - backup_source_export_central_source_address is string
+      - >-
+        backup_source_export_central_source_address is match(
+          '^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\\.){3}'
+          ~ '(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])$'
+        )
+      - backup_source_export_sshd_config_path is match('^/[A-Za-z0-9._/-]+$')
+      - backup_source_export_sshd_config_path is not search('(^|/)\.\.(/|$)')
+      - backup_source_export_user is match('^[a-z_][a-z0-9_-]*$')
+      - backup_source_export_user_home is match('^/[A-Za-z0-9._/-]+$')
+      - backup_source_export_user_home is not search('(^|/)\.\.(/|$)')
+      - backup_source_export_export_root is match('^/[A-Za-z0-9._/-]+$')
+      - backup_source_export_export_root is not search('(^|/)\.\.(/|$)')
+      - backup_source_export_command_path is match('^/[A-Za-z0-9._/-]+$')
+      - backup_source_export_command_path is not search('(^|/)\.\.(/|$)')
+      - backup_source_export_sudoers_path is match('^/[A-Za-z0-9._/-]+$')
+      - backup_source_export_sudoers_path is not search('(^|/)\.\.(/|$)')
+      - backup_source_export_target_name is match('^[A-Za-z0-9._-]+$')
+      - backup_source_export_required_packages is sequence
+      - backup_source_export_required_packages is not string
+      - backup_source_export_sources is sequence
+      - backup_source_export_sources is not string
+      - backup_source_export_vaultwarden_enabled or backup_source_export_sources | length > 0
+      - backup_source_export_vaultwarden_enabled is boolean
+      - backup_source_export_vaultwarden_data_directory is match('^/[A-Za-z0-9._/-]+$')
+      - backup_source_export_vaultwarden_data_directory is not search('(^|/)\.\.(/|$)')
+      - backup_source_export_vaultwarden_compose_path is match('^/[A-Za-z0-9._/-]+$')
+      - backup_source_export_vaultwarden_compose_path is not search('(^|/)\.\.(/|$)')
+      - backup_source_export_vaultwarden_compose_project_name is match('^[a-z0-9][a-z0-9_-]*$')
+      - backup_source_export_vaultwarden_health_url is match('^https?://[A-Za-z0-9._:-]+/[A-Za-z0-9._/-]*$')
+      - backup_source_export_vaultwarden_export_filename is match('^[A-Za-z0-9][A-Za-z0-9._-]*\.tar$')
+      - backup_source_export_vaultwarden_required_packages is sequence
+      - backup_source_export_vaultwarden_required_packages is not string
+
+- name: Validate declared backup export sources
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: Each file-mode backup export source needs a safe absolute source_path, safe relative_path, and explicit boolean required flag.
+    that:
+      - item.source_path is defined
+      - item.source_path is string
+      - item.source_path is match('^/[A-Za-z0-9._/-]+$')
+      - item.source_path is not search('(^|/)\.\.(/|$)')
+      - item.relative_path is defined
+      - item.relative_path is string
+      - item.relative_path is match('^[A-Za-z0-9][A-Za-z0-9._/-]*$')
+      - item.relative_path is not search('(^|/)\.\.(/|$)')
+      - item.required is defined
+      - item.required is boolean
+  loop: "{{ backup_source_export_sources }}"
+  loop_control:
+    label: "{{ item.relative_path | default('missing-relative-path') }}"
+  when: not backup_source_export_vaultwarden_enabled
+
+- name: Ensure backup export dependencies are present
+  ansible.builtin.package:
+    name: "{{ backup_source_export_required_packages }}"
+    state: present
+
+- name: Ensure Vaultwarden exporter dependencies are present
+  ansible.builtin.package:
+    name: "{{ backup_source_export_vaultwarden_required_packages }}"
+    state: present
+  when: backup_source_export_vaultwarden_enabled
+
+- name: Create restricted backup source system group
+  ansible.builtin.group:
+    name: "{{ backup_source_export_user }}"
+    system: true
+
+- name: Create restricted backup source account
+  ansible.builtin.user:
+    name: "{{ backup_source_export_user }}"
+    group: "{{ backup_source_export_user }}"
+    home: "{{ backup_source_export_user_home }}"
+    # The key is source-bound and forced-command-only; /bin/sh is required for
+    # sshd to execute that forced command on Alpine.
+    shell: /bin/sh
+    system: true
+    create_home: true
+    # Keep the account unlocked for public-key authentication. Password and
+    # keyboard-interactive authentication are disabled in the managed sshd drop-in.
+    password: ''
+
+- name: Secure restricted backup source account home directory
+  ansible.builtin.file:
+    path: "{{ backup_source_export_user_home }}"
+    state: directory
+    owner: "{{ backup_source_export_user }}"
+    group: "{{ backup_source_export_user }}"
+    mode: '0750'
+
+- name: Create backup source account SSH directory
+  ansible.builtin.file:
+    path: "{{ backup_source_export_user_home }}/.ssh"
+    state: directory
+    owner: "{{ backup_source_export_user }}"
+    group: "{{ backup_source_export_user }}"
+    mode: '0700'
+
+- name: Restrict backup source account to the central fixed command
+  ansible.builtin.copy:
+    dest: "{{ backup_source_export_user_home }}/.ssh/authorized_keys"
+    content: >-
+      restrict,from="{{ backup_source_export_central_source_address }}",command="/usr/bin/sudo -n
+      {{ backup_source_export_command_path }}" {{ backup_source_export_central_public_key }}
+    owner: "{{ backup_source_export_user }}"
+    group: "{{ backup_source_export_user }}"
+    mode: '0600'
+
+- name: Configure key-only SSH access for the restricted backup source account
+  ansible.builtin.template:
+    src: backup-source-export-sshd.conf.j2
+    dest: "{{ backup_source_export_sshd_config_path }}"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload restricted backup source SSH service
+
+- name: Validate SSH configuration after restricted backup account update
+  ansible.builtin.command:
+    argv:
+      - /usr/sbin/sshd
+      - -t
+      - -f
+      - /etc/ssh/sshd_config
+  changed_when: false
+
+- name: Create backup export directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+  loop:
+    - "{{ backup_source_export_command_path | dirname }}"
+    - "{{ backup_source_export_export_root }}"
+
+- name: Install root-owned fixed backup export command
+  ansible.builtin.template:
+    src: >-
+      {{ backup_source_export_vaultwarden_enabled |
+         ternary('homelab-vaultwarden-backup-export.j2', 'homelab-backup-export.j2') }}
+    dest: "{{ backup_source_export_command_path }}"
+    owner: root
+    group: root
+    mode: '0750'
+
+- name: Permit only the fixed backup export command through sudo
+  ansible.builtin.copy:
+    dest: "{{ backup_source_export_sudoers_path }}"
+    content: "{{ backup_source_export_user }} ALL=(root) NOPASSWD: {{ backup_source_export_command_path }}\n"
+    owner: root
+    group: root
+    mode: '0440'
+    validate: /usr/sbin/visudo -cf %s
+
+- name: Check declared backup export sources
+  ansible.builtin.stat:
+    path: "{{ item.source_path }}"
+  loop: "{{ backup_source_export_sources }}"
+  loop_control:
+    label: "{{ item.source_path }}"
+  register: backup_source_export_source_stats
+  when: not backup_source_export_vaultwarden_enabled
+
+- name: Require declared required backup export sources
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: "Required backup export source {{ item.item.source_path }} is missing or is not a regular file."
+    that:
+      - not item.item.required or (item.stat.exists and item.stat.isreg)
+  loop: "{{ backup_source_export_source_stats.results }}"
+  loop_control:
+    label: "{{ item.item.source_path }}"
+  when: not backup_source_export_vaultwarden_enabled

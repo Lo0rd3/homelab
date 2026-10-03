@@ -1,0 +1,17 @@
+[Unit]
+Description=Homelab central Restic backup
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+UMask=0077
+ExecStart={{ backup_orchestrator_runner_path }}
+TimeoutStartSec={{ backup_orchestrator_service_timeout_seconds }}s
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths={{ backup_orchestrator_root_dir }} {{ backup_orchestrator_metric_path | dirname }}

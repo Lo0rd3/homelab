@@ -29,12 +29,31 @@ monitoring_node_exporter_enabled: true
 monitoring_node_exporter_image: prom/node-exporter
 monitoring_node_exporter_image_tag: v1.9.0
 monitoring_prometheus_extra_node_exporter_targets:
+  # Keep this aligned with hosts.yml until backup-01 receives its final address.
+  - 192.168.1.4:9100
   - 192.168.1.1:9100
   - 192.168.1.2:9100
   - 192.168.1.3:9100
   - 192.168.1.51:9100
+  # The managed replacement remains expected-down until it is provisioned.
+  - 192.168.1.5:9100
   - 192.168.1.251:9100
   - 192.168.1.252:9100
+
+# Each target needs exactly one current result metric from backup-01:
+# homelab_backup_last_success_timestamp_seconds or
+# homelab_backup_last_failure_timestamp_seconds, labelled with target=<name>.
+# Add targets here declaratively; the rules template creates the three alert
+# conditions without a per-target rule implementation.
+monitoring_backup_targets:
+  - name: adguard-01
+    max_age_seconds: 93600 # 26 hours: daily backup plus missed-run tolerance.
+  - name: proxy-01
+    max_age_seconds: 93600
+  - name: monitoring-01
+    max_age_seconds: 93600
+  - name: vaultwarden-01
+    max_age_seconds: 93600
 
 monitoring_cadvisor_enabled: true
 monitoring_cadvisor_image: gcr.io/cadvisor/cadvisor

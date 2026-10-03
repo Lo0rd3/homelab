@@ -52,3 +52,50 @@ groups:
           summary: Host CPU usage is high
           description: >-
             {% raw %}CPU usage on {{ $labels.instance }} has been above 90% for 15 minutes.{% endraw %}
+
+{% for target in monitoring_backup_targets | default([]) %}
+      - record: homelab_backup_age_seconds
+        expr: >-
+          time() - homelab_backup_last_success_timestamp_seconds{target="{{ target.name }}"}
+
+      - record: homelab_backup_failure_state
+        expr: >-
+          homelab_backup_last_failure_timestamp_seconds{target="{{ target.name }}"}
+          > bool homelab_backup_last_success_timestamp_seconds{target="{{ target.name }}"}
+
+      - alert: BackupStatusMissing
+        expr: >-
+          absent(
+            homelab_backup_last_success_timestamp_seconds{target="{{ target.name }}"}
+            or homelab_backup_last_failure_timestamp_seconds{target="{{ target.name }}"}
+          )
+        for: {{ monitoring_backup_status_missing_for | default('10m') }}
+        labels:
+          severity: critical
+          target: {{ target.name | to_json }}
+        annotations:
+          summary: Backup status is missing
+          description: >-
+            No backup result metric has been exposed by backup-01 for {{ target.name }} for 10 minutes.
+
+      - alert: BackupFailed
+        expr: homelab_backup_failure_state{target="{{ target.name }}"} == 1
+        labels:
+          severity: critical
+          target: {{ target.name | to_json }}
+        annotations:
+          summary: Backup failed
+          description: >-
+            The latest backup result reported by backup-01 for {{ target.name }} is a failure.
+
+      - alert: BackupStale
+        expr: >-
+          homelab_backup_age_seconds{target="{{ target.name }}"} > {{ target.max_age_seconds }}
+        labels:
+          severity: warning
+          target: {{ target.name | to_json }}
+        annotations:
+          summary: Backup success is stale
+          description: >-
+            The last successful backup reported by backup-01 for {{ target.name }} is older than {{ target.max_age_seconds }} seconds.
+{% endfor %}

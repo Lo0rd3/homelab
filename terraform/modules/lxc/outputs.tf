@@ -17,8 +17,3 @@ output "ipv4" {
   description = "IPv4 data reported by Proxmox for the container."
   value       = proxmox_virtual_environment_container.this.ipv4
 }
-
-output "ipv6" {
-  description = "IPv6 data reported by Proxmox for the container."
-  value       = proxmox_virtual_environment_container.this.ipv6
-}

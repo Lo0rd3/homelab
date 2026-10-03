@@ -1,0 +1,26 @@
+---
+# The public key is deliberately unset: supply it from untracked inventory data.
+backup_source_export_central_public_key: ''
+backup_source_export_central_source_address: ''
+backup_source_export_user: homelab-backup
+backup_source_export_user_home: /var/lib/homelab-backup
+backup_source_export_export_root: /var/lib/homelab-backup/exports
+backup_source_export_command_path: /usr/local/libexec/homelab-backup-export
+backup_source_export_sudoers_path: /etc/sudoers.d/homelab-backup-export
+backup_source_export_sshd_config_path: /etc/ssh/sshd_config.d/90-homelab-backup.conf
+backup_source_export_target_name: "{{ inventory_hostname }}"
+backup_source_export_required_packages:
+  - sudo
+  - tar
+# Sources are copied only by the root-owned fixed command.
+backup_source_export_sources: []
+# Vaultwarden uses a dedicated exporter because its SQLite database must be
+# quiesced before the complete data tree is archived.
+backup_source_export_vaultwarden_enabled: false
+backup_source_export_vaultwarden_data_directory: /opt/vaultwarden/data
+backup_source_export_vaultwarden_compose_path: /opt/compose/vaultwarden/compose.yml
+backup_source_export_vaultwarden_compose_project_name: vaultwarden
+backup_source_export_vaultwarden_health_url: http://192.168.1.5:8000/alive
+backup_source_export_vaultwarden_export_filename: vaultwarden-data.tar
+backup_source_export_vaultwarden_required_packages:
+  - curl

@@ -1,0 +1,45 @@
+---
+# Host-specific values for proxy-01.
+ansible_user: debian
+
+# Expose lightweight host metrics to the monitoring VM.
+node_exporter_web_listen_host: 0.0.0.0
+
+nginx_tls_secret_directory: /etc/nginx/secrets
+nginx_tls_certificate_path: /etc/nginx/secrets/idios.crt
+nginx_tls_private_key_path: /etc/nginx/secrets/idios.key
+
+# Vaultwarden uses a dedicated publicly trusted certificate obtained with DNS-01.
+acme_duckdns_enabled: true
+acme_duckdns_domain: lo0orde.duckdns.org
+acme_duckdns_email: joaofmp99@gmail.com
+
+# Export only the TLS material required to restore this reverse proxy.
+backup_source_export_central_source_address: 192.168.1.4
+backup_source_export_target_name: proxy-01
+backup_source_export_sources:
+  - source_path: /etc/nginx/secrets/idios.crt
+    relative_path: nginx/idios.crt
+    required: true
+  - source_path: /etc/nginx/secrets/idios.key
+    relative_path: nginx/idios.key
+    required: true
+
+nginx_vhosts:
+  - server_name: proxmox.idios
+    upstream_url: https://192.168.1.1:8006
+    websocket: true
+
+  - server_name: adguard.idios
+    upstream_url: http://192.168.1.252
+
+  # Preserve the familiar LAN name while keeping one Android-compatible
+  # Vaultwarden origin. AdGuard resolves the redirect target to this proxy.
+  - server_name: vault.idios
+    redirect_url: https://lo0orde.duckdns.org
+
+  - server_name: lo0orde.duckdns.org
+    upstream_url: http://192.168.1.5:8000
+    websocket: true
+    tls_certificate_path: /etc/nginx/secrets/lo0orde.duckdns.org.crt
+    tls_private_key_path: /etc/nginx/secrets/lo0orde.duckdns.org.key

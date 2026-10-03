@@ -1,0 +1,98 @@
+---
+- name: List AdGuard DNS rewrites for {{ adguard_dns_rewrite.domain }}
+  ansible.builtin.uri:
+    url: "{{ adguard_api_url }}/control/rewrite/list"
+    method: GET
+    headers:
+      Cookie: "{{ adguard_api_login.cookies_string }}"
+    status_code:
+      - 200
+      - 404
+    return_content: true
+    use_proxy: false
+  register: adguard_rewrite_list
+  changed_when: false
+  no_log: true
+  retries: 15
+  delay: 2
+  until: adguard_rewrite_list.status == 200
+
+- name: Select existing AdGuard DNS rewrites for {{ adguard_dns_rewrite.domain }}
+  ansible.builtin.set_fact:
+    adguard_matching_rewrites: >-
+      {{ adguard_rewrite_list.json | selectattr('domain', 'equalto', adguard_dns_rewrite.domain) | list }}
+  changed_when: false
+
+- name: Reject duplicate AdGuard DNS rewrites for {{ adguard_dns_rewrite.domain }}
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: >-
+      AdGuard contains multiple rewrites for {{ adguard_dns_rewrite.domain }}.
+      Resolve the duplicates manually before rerunning.
+    that:
+      - adguard_matching_rewrites | length <= 1
+
+- name: Add AdGuard DNS rewrite for {{ adguard_dns_rewrite.domain }}
+  ansible.builtin.uri:
+    url: "{{ adguard_api_url }}/control/rewrite/add"
+    method: POST
+    headers:
+      Cookie: "{{ adguard_api_login.cookies_string }}"
+    body_format: json
+    body: "{{ adguard_dns_rewrite }}"
+    status_code: 200
+    use_proxy: false
+  when: adguard_matching_rewrites | length == 0
+  no_log: true
+
+- name: Update AdGuard DNS rewrite state for {{ adguard_dns_rewrite.domain }}
+  ansible.builtin.uri:
+    url: "{{ adguard_api_url }}/control/rewrite/update"
+    method: PUT
+    headers:
+      Cookie: "{{ adguard_api_login.cookies_string }}"
+    body_format: json
+    body:
+      target:
+        domain: "{{ adguard_matching_rewrites[0].domain }}"
+        answer: "{{ adguard_matching_rewrites[0].answer }}"
+      update: "{{ adguard_dns_rewrite }}"
+    status_code: 200
+    use_proxy: false
+  when:
+    - adguard_matching_rewrites | length == 1
+    - >-
+      adguard_matching_rewrites[0].answer != adguard_dns_rewrite.answer or
+      (adguard_matching_rewrites[0].enabled | bool) != (adguard_dns_rewrite.enabled | bool)
+  no_log: true
+
+- name: Verify AdGuard DNS rewrite for {{ adguard_dns_rewrite.domain }}
+  ansible.builtin.uri:
+    url: "{{ adguard_api_url }}/control/rewrite/list"
+    method: GET
+    headers:
+      Cookie: "{{ adguard_api_login.cookies_string }}"
+    status_code: 200
+    return_content: true
+    use_proxy: false
+  register: adguard_rewrite_verification
+  changed_when: false
+  no_log: true
+
+- name: Assert desired AdGuard DNS rewrite for {{ adguard_dns_rewrite.domain }}
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: >-
+      AdGuard did not retain the desired rewrite for {{ adguard_dns_rewrite.domain }} ->
+      {{ adguard_dns_rewrite.answer }}.
+    that:
+      - >-
+        adguard_rewrite_verification.json | selectattr('domain', 'equalto', adguard_dns_rewrite.domain) |
+        list | length == 1
+      - >-
+        (adguard_rewrite_verification.json | selectattr('domain', 'equalto', adguard_dns_rewrite.domain) |
+        list)[0].answer == adguard_dns_rewrite.answer
+      - >-
+        (adguard_rewrite_verification.json | selectattr('domain', 'equalto', adguard_dns_rewrite.domain) |
+        list)[0].enabled | bool
+        == adguard_dns_rewrite.enabled | bool

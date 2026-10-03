@@ -1,0 +1,3 @@
+{% for pin in backup_orchestrator_known_hosts %}
+{{ pin.host }} {{ pin.key_type }} {{ pin.public_key }}
+{% endfor %}

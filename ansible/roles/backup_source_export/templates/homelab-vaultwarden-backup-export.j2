@@ -1,0 +1,84 @@
+#!/bin/sh
+# Reached only through the source-pinned, forced SSH command installed by this role.
+set -eu
+umask 077
+
+export_root='{{ backup_source_export_export_root }}'
+current_export="$export_root/current"
+previous_export="$export_root/previous"
+lock_dir="$export_root/.lock"
+data_directory='{{ backup_source_export_vaultwarden_data_directory }}'
+compose_path='{{ backup_source_export_vaultwarden_compose_path }}'
+compose_project='{{ backup_source_export_vaultwarden_compose_project_name }}'
+health_url='{{ backup_source_export_vaultwarden_health_url }}'
+export_filename='{{ backup_source_export_vaultwarden_export_filename }}'
+service_stop_attempted=false
+work_dir=''
+
+# A forced command must never honour arguments or a requested remote command.
+if [ "$#" -ne 0 ] || [ -n "${SSH_ORIGINAL_COMMAND:-}" ]; then
+  exit 64
+fi
+
+if ! mkdir "$lock_dir" 2>/dev/null; then
+  exit 75
+fi
+
+work_dir=$(mktemp -d "$export_root/.vaultwarden-export.XXXXXX")
+cleanup() {
+  status=$?
+  if [ "$service_stop_attempted" = true ]; then
+    if ! docker compose -f "$compose_path" -p "$compose_project" up -d; then
+      status=1
+    fi
+  fi
+  rm -rf "$work_dir" "$lock_dir"
+  trap - EXIT HUP INT TERM
+  exit "$status"
+}
+trap cleanup EXIT HUP INT TERM
+
+[ -d "$data_directory" ]
+[ -f "$data_directory/db.sqlite3" ]
+
+# Stop before reading so db.sqlite3 and a present WAL remain one consistent set.
+service_stop_attempted=true
+docker compose -f "$compose_path" -p "$compose_project" stop
+tar -C "$(dirname "$data_directory")" -cf "$work_dir/$export_filename" "$(basename "$data_directory")"
+
+if ! docker compose -f "$compose_path" -p "$compose_project" up -d; then
+  exit 1
+fi
+service_stop_attempted=false
+
+health_attempts=0
+until curl --fail --silent --show-error --max-time 15 "$health_url" >/dev/null; do
+  health_attempts=$((health_attempts + 1))
+  [ "$health_attempts" -lt 10 ] || exit 1
+  sleep 3
+done
+
+(
+  cd "$work_dir"
+  sha256sum "$export_filename" > checksums.sha256
+  printf '%s\n' "$export_filename" > files
+)
+created_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+{
+  printf 'format_version=1\n'
+  printf 'target=%s\n' '{{ backup_source_export_target_name }}'
+  printf 'created_at=%s\n' "$created_at"
+  printf 'checksum_file=checksums.sha256\n'
+  printf 'files_file=files\n'
+} > "$work_dir/manifest"
+
+rm -rf "$previous_export"
+[ ! -d "$current_export" ] || mv "$current_export" "$previous_export"
+mv "$work_dir" "$current_export"
+work_dir=''
+rm -rf "$previous_export"
+rmdir "$lock_dir"
+trap - EXIT HUP INT TERM
+
+# Stream only the fixed, verified export; the SSH client selects neither data nor command.
+exec tar -C "$current_export" -cf - .

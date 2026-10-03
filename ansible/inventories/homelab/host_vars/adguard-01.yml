@@ -3,5 +3,36 @@
 ansible_user: root
 ansible_python_interpreter: /usr/bin/python3
 
+# Pin the selected linux_amd64 release archive to its official SHA-256.
+adguard_version: '0.107.79'
+adguard_archive_sha256: 'c48f4a43000665484c5ec28177de11a004759b620dae8f77b2aabefc9ef3687f'
+
 # Expose lightweight host metrics to the monitoring VM.
 node_exporter_web_listen_host: 0.0.0.0
+adguard_api_url: http://192.168.1.252
+
+# Keep the Android-compatible Vaultwarden hostname on the LAN proxy.
+adguard_dns_rewrites:
+  - domain: proxmox.idios
+    answer: 192.168.1.3
+    enabled: true
+  - domain: adguard.idios
+    answer: 192.168.1.3
+    enabled: true
+  - domain: vault.idios
+    answer: 192.168.1.3
+    enabled: true
+  - domain: lo0orde.duckdns.org
+    answer: 192.168.1.3
+    enabled: true
+
+# The central backup VM public key is supplied from untracked inventory data.
+backup_source_export_central_source_address: 192.168.1.4
+backup_source_export_target_name: adguard-01
+backup_source_export_sources:
+  - source_path: /etc/adguardhome/AdGuardHome.yaml
+    relative_path: AdGuardHome.yaml
+    required: true
+  - source_path: /var/lib/adguardhome/data/leases.json
+    relative_path: data/leases.json
+    required: false

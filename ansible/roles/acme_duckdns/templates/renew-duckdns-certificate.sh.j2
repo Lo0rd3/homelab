@@ -1,0 +1,36 @@
+#!/bin/sh
+set -eu
+
+umask 077
+set -a
+. "{{ acme_duckdns_secret_file }}"
+set +a
+
+certificate="{{ acme_duckdns_state_directory }}/certificates/{{ acme_duckdns_domain }}.crt"
+private_key="{{ acme_duckdns_state_directory }}/certificates/{{ acme_duckdns_domain }}.key"
+
+if [ -f "$certificate" ] && [ -f "$private_key" ]; then
+    lego --accept-tos --email "{{ acme_duckdns_email }}" --dns duckdns \
+        --path "{{ acme_duckdns_state_directory }}" --domains "{{ acme_duckdns_domain }}" \
+        renew --days "{{ acme_duckdns_renew_days }}"
+else
+    lego --accept-tos --email "{{ acme_duckdns_email }}" --dns duckdns \
+        --path "{{ acme_duckdns_state_directory }}" --domains "{{ acme_duckdns_domain }}" run
+fi
+
+changed=false
+if ! cmp -s "$certificate" "{{ acme_duckdns_certificate_path }}"; then
+    install -o root -g root -m 0640 "$certificate" "{{ acme_duckdns_certificate_path }}.new"
+    mv "{{ acme_duckdns_certificate_path }}.new" "{{ acme_duckdns_certificate_path }}"
+    changed=true
+fi
+if ! cmp -s "$private_key" "{{ acme_duckdns_private_key_path }}"; then
+    install -o root -g root -m 0600 "$private_key" "{{ acme_duckdns_private_key_path }}.new"
+    mv "{{ acme_duckdns_private_key_path }}.new" "{{ acme_duckdns_private_key_path }}"
+    changed=true
+fi
+
+if [ "$changed" = true ] && systemctl is-active --quiet nginx; then
+    nginx -t
+    systemctl reload nginx
+fi

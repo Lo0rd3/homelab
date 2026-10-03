@@ -1,0 +1,5 @@
+---
+- name: Reload restricted backup source SSH service
+  ansible.builtin.service:
+    name: sshd
+    state: reloaded

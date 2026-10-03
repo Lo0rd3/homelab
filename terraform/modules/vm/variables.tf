@@ -8,6 +8,18 @@ variable "node_name" {
   }
 }
 
+variable "vm_id" {
+  description = "Optional Proxmox VM ID. Leave null for Proxmox to allocate one."
+  type        = number
+  default     = null
+  nullable    = true
+
+  validation {
+    condition     = var.vm_id == null || var.vm_id > 0
+    error_message = "vm_id must be null or greater than 0."
+  }
+}
+
 variable "guest_name" {
   description = "Guest name for the VM, such as monitoring-01."
   type        = string

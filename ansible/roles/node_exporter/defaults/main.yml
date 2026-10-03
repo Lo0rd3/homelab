@@ -31,7 +31,11 @@ node_exporter_systemd_override_dir: "/etc/systemd/system/{{ node_exporter_servic
 node_exporter_systemd_override_path: "{{ node_exporter_systemd_override_dir }}/override.conf"
 node_exporter_openrc_conf_path: "/etc/conf.d/{{ node_exporter_service_name }}"
 node_exporter_filesystem_mount_points_exclude: '^/(dev|proc|run/credentials/.+|sys|var/lib/docker/.+|var/lib/containers/storage/.+)($|/)'
-node_exporter_filesystem_fs_types_exclude: '^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|mqueue|nsfs|overlay|proc|pstore|securityfs|selinuxfs|squashfs|sysfs|tracefs)$'
+node_exporter_filesystem_fs_types_exclude: >-
+  {{
+    '^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|mqueue|'
+    ~ 'nsfs|overlay|proc|pstore|securityfs|selinuxfs|squashfs|sysfs|tracefs)$'
+  }}
 node_exporter_default_flags:
   - "--web.listen-address={{ node_exporter_web_listen_host }}:{{ node_exporter_web_listen_port }}"
   - --runtime.gomaxprocs=1

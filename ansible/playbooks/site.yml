@@ -50,6 +50,18 @@
   roles:
     - role: node_exporter
 
+- name: Apply central backup orchestration to backup hosts
+  hosts: backup
+  become: true
+  roles:
+    - role: backup_orchestrator
+
+- name: Apply restricted backup exports to declared source hosts
+  hosts: backup_source_export_hosts
+  become: true
+  roles:
+    - role: backup_source_export
+
 - name: Apply AdGuard role to adguard hosts
   hosts: adguard
   become: true

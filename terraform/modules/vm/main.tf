@@ -8,6 +8,7 @@ terraform {
 
 resource "proxmox_virtual_environment_vm" "this" {
   node_name  = var.node_name
+  vm_id      = var.vm_id
   name       = var.guest_name
   boot_order = ["scsi0"]
 

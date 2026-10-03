@@ -11,7 +11,7 @@ services:
       - --storage.tsdb.wal-compression
       - --web.enable-lifecycle
     ports:
-      - "${PROMETHEUS_PUBLISHED_PORT}"
+      - "127.0.0.1:${PROMETHEUS_PUBLISHED_PORT}"
     volumes:
       - "${PROMETHEUS_CONFIG_PATH}:/etc/prometheus/prometheus.yml:ro"
       - "${PROMETHEUS_RULES_PATH}:/etc/prometheus/rules:ro"
@@ -25,7 +25,7 @@ services:
     image: "${GRAFANA_IMAGE}"
     restart: "${MONITORING_RESTART_POLICY}"
     ports:
-      - "${GRAFANA_PUBLISHED_PORT}"
+      - "127.0.0.1:${GRAFANA_PUBLISHED_PORT}"
     environment:
       GF_PATHS_PROVISIONING: /etc/grafana/provisioning
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
@@ -46,7 +46,7 @@ services:
       - --config.file=/etc/alertmanager/alertmanager.yml
       - --storage.path=/alertmanager
     ports:
-      - "${ALERTMANAGER_PUBLISHED_PORT}"
+      - "127.0.0.1:${ALERTMANAGER_PUBLISHED_PORT}"
     volumes:
       - "${ALERTMANAGER_CONFIG_PATH}:/etc/alertmanager/alertmanager.yml:ro"
       - "${ALERTMANAGER_DATA_PATH}:/alertmanager"
@@ -55,7 +55,7 @@ services:
     image: "${NODE_EXPORTER_IMAGE}"
     restart: "${MONITORING_RESTART_POLICY}"
     ports:
-      - "${NODE_EXPORTER_PUBLISHED_PORT}"
+      - "127.0.0.1:${NODE_EXPORTER_PUBLISHED_PORT}"
     command:
       - --path.rootfs=/host
       - --path.procfs=/host/proc
@@ -69,14 +69,11 @@ services:
   cadvisor:
     image: "${CADVISOR_IMAGE}"
     restart: "${MONITORING_RESTART_POLICY}"
-    privileged: true
     ports:
-      - "${CADVISOR_PUBLISHED_PORT}"
-    devices:
-      - /dev/kmsg
+      - "127.0.0.1:${CADVISOR_PUBLISHED_PORT}"
     volumes:
       - "/:/rootfs:ro"
-      - "/var/run:/var/run:ro"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
       - "/sys:/sys:ro"
       - "/var/lib/docker:/var/lib/docker:ro"
       - "/dev/disk:/dev/disk:ro"

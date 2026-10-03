@@ -1,0 +1,98 @@
+---
+- name: Validate Vaultwarden Docker role inputs
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: >-
+      Vaultwarden Docker requires Debian 12, absolute runtime paths, a pinned image,
+      a canonical HTTPS domain, and a valid LAN listener address and port.
+    that:
+      - ansible_facts['distribution'] == 'Debian'
+      - ansible_facts['distribution_major_version'] == '12'
+      - vaultwarden_docker_deploy is boolean
+      - vaultwarden_docker_compose_project_name is match('^[a-z0-9][a-z0-9_-]*$')
+      - vaultwarden_docker_compose_directory is match('^/')
+      - vaultwarden_docker_compose_path is match('^/')
+      - vaultwarden_docker_data_directory is match('^/')
+      - vaultwarden_docker_runtime_directory is match('^/')
+      - vaultwarden_docker_env_file is match('^/')
+      - vaultwarden_docker_image is match('^[a-z0-9][a-z0-9._/-]*:[A-Za-z0-9._-]+$')
+      - vaultwarden_docker_domain is match('^https://[^/]+$')
+      - vaultwarden_docker_listen_address is match('^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])$')
+      - vaultwarden_docker_port | int > 0
+      - vaultwarden_docker_port | int < 65536
+      - vaultwarden_docker_signups_allowed is boolean
+
+- name: Create Vaultwarden Docker directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ vaultwarden_docker_compose_directory }}", mode: '0750' }
+    - { path: "{{ vaultwarden_docker_data_directory | dirname }}", mode: '0750' }
+    - { path: "{{ vaultwarden_docker_data_directory }}", mode: '0750' }
+    - { path: "{{ vaultwarden_docker_runtime_directory }}", mode: '0750' }
+
+- name: Render Vaultwarden Docker Compose definition
+  ansible.builtin.template:
+    src: compose.yml.j2
+    dest: "{{ vaultwarden_docker_compose_path }}"
+    owner: root
+    group: root
+    mode: '0640'
+
+- name: Check Vaultwarden runtime environment file
+  ansible.builtin.stat:
+    path: "{{ vaultwarden_docker_env_file }}"
+  register: vaultwarden_docker_env_file_stat
+  when: vaultwarden_docker_deploy
+
+- name: Require a root-only Vaultwarden runtime environment file
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: >-
+      Create {{ vaultwarden_docker_env_file }} from externally managed secret inputs
+      with root:root ownership and mode 0600 before starting Vaultwarden.
+    that:
+      - vaultwarden_docker_env_file_stat.stat.exists
+      - vaultwarden_docker_env_file_stat.stat.isreg
+      - vaultwarden_docker_env_file_stat.stat.pw_name == 'root'
+      - vaultwarden_docker_env_file_stat.stat.gr_name == 'root'
+      - vaultwarden_docker_env_file_stat.stat.mode == '0600'
+  when: vaultwarden_docker_deploy
+
+- name: Validate Vaultwarden Docker Compose definition
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - -f
+      - "{{ vaultwarden_docker_compose_path }}"
+      - config
+      - -q
+  changed_when: false
+  when: vaultwarden_docker_deploy
+
+- name: Start Vaultwarden Docker Compose service
+  community.docker.docker_compose_v2:
+    project_src: "{{ vaultwarden_docker_compose_directory }}"
+    project_name: "{{ vaultwarden_docker_compose_project_name }}"
+    files:
+      - "{{ vaultwarden_docker_compose_path | basename }}"
+    state: present
+    pull: policy
+    recreate: auto
+    remove_orphans: false
+    wait: true
+    wait_timeout: 120
+  when: vaultwarden_docker_deploy
+
+- name: Validate Vaultwarden Docker health endpoint
+  ansible.builtin.uri:
+    url: "http://{{ vaultwarden_docker_listen_address }}:{{ vaultwarden_docker_port }}/alive"
+    method: GET
+    status_code: 200
+    return_content: false
+  when: vaultwarden_docker_deploy

@@ -9,9 +9,9 @@ variable "proxmox_endpoint" {
 }
 
 variable "proxmox_insecure" {
-  description = "Set true only when the homelab uses a self-signed Proxmox certificate."
+  description = "Whether to skip Proxmox TLS certificate verification. Keep false unless a self-signed certificate is required for a local deployment."
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "target_node_name" {
@@ -27,6 +27,7 @@ variable "target_node_name" {
 variable "vms" {
   description = "Configuration for VM-based workloads keyed by service name."
   type = map(object({
+    vm_id                   = optional(number)
     guest_name              = string
     clone_source_vm_id      = number
     cpu_cores               = number
@@ -48,6 +49,7 @@ variable "vms" {
     condition = length(var.vms) > 0 && alltrue([
       for name, vm in var.vms :
       length(trimspace(name)) > 0 &&
+      (vm.vm_id == null || vm.vm_id > 0) &&
       length(trimspace(vm.guest_name)) > 0 &&
       vm.clone_source_vm_id > 0 &&
       vm.cpu_cores >= 1 &&
@@ -58,7 +60,7 @@ variable "vms" {
       length(trimspace(vm.cloud_init_datastore_id)) > 0 &&
       length(trimspace(vm.user_name)) > 0
     ])
-    error_message = "Each VM must define a non-empty name, clone source, valid sizing, and non-empty datastore, bridge, cloud-init datastore, and user values."
+    error_message = "Each VM must define a non-empty name, an optional positive VM ID, clone source, valid sizing, and non-empty datastore, bridge, cloud-init datastore, and user values."
   }
 
   validation {
@@ -99,10 +101,11 @@ variable "lxcs" {
     ipv4_gateway           = optional(string)
     started                = optional(bool, true)
     start_on_boot          = optional(bool, true)
-    unprivileged           = optional(bool, true)
-    description            = optional(string)
-    tags                   = optional(list(string), [])
-    os_type                = string
+    # Keep the reviewed privilege decision explicit for every managed LXC.
+    unprivileged = bool
+    description  = optional(string)
+    tags         = optional(list(string), [])
+    os_type      = string
   }))
 
   validation {

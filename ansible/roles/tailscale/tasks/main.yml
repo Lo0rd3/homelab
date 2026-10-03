@@ -50,10 +50,7 @@
     signed_by: "{{ tailscale_apt_key_url }}"
     state: present
   register: tailscale_apt_repository
-
-- name: Refresh APT cache after adding Tailscale repository
-  ansible.builtin.apt:
-    update_cache: true
+  notify: Refresh APT cache after adding Tailscale repository
 
 - name: Ensure Tailscale packages are present
   ansible.builtin.apt:
@@ -109,6 +106,7 @@
   environment:
     TS_AUTH_KEY: "{{ tailscale_auth_key }}"
   no_log: true
+  changed_when: true
   when:
     - tailscale_authenticate | bool
     - tailscale_ipv4.rc != 0

@@ -1,0 +1,229 @@
+---
+- name: Validate backup orchestrator non-secret inputs
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: >-
+      Backup orchestrator requires packages, absolute local paths, a B2 bucket,
+      and target definitions with repository prefixes and retention policies.
+    that:
+      - backup_orchestrator_packages is sequence
+      - backup_orchestrator_packages is not string
+      - backup_orchestrator_packages | length > 0
+      - backup_orchestrator_root_dir is string
+      - backup_orchestrator_root_dir is match('^/')
+      - backup_orchestrator_staging_dir is string
+      - backup_orchestrator_staging_dir is match('^/')
+      - backup_orchestrator_cache_dir is string
+      - backup_orchestrator_cache_dir is match('^/')
+      - backup_orchestrator_config_dir is string
+      - backup_orchestrator_config_dir is match('^/')
+      - backup_orchestrator_secrets_dir is string
+      - backup_orchestrator_secrets_dir is match('^/')
+      - backup_orchestrator_b2_credentials_path is string
+      - backup_orchestrator_b2_credentials_path is match('^/')
+      - backup_orchestrator_restic_password_path is string
+      - backup_orchestrator_restic_password_path is match('^/')
+      - backup_orchestrator_ssh_private_key_path is string
+      - backup_orchestrator_ssh_private_key_path is match('^/')
+      - backup_orchestrator_targets_config_path is string
+      - backup_orchestrator_targets_config_path is match('^/')
+      - backup_orchestrator_known_hosts_path is string
+      - backup_orchestrator_known_hosts_path is match('^/')
+      - backup_orchestrator_runner_path is string
+      - backup_orchestrator_runner_path is match('^/[A-Za-z0-9._/-]+$')
+      - backup_orchestrator_service_name is match('^[A-Za-z0-9_.@-]+\\.service$')
+      - backup_orchestrator_timer_name is match('^[A-Za-z0-9_.@-]+\\.timer$')
+      - backup_orchestrator_schedule is string
+      - backup_orchestrator_schedule | length > 0
+      - backup_orchestrator_source_user is match('^[a-z_][a-z0-9_-]*$')
+      - backup_orchestrator_metric_path is match('^/[A-Za-z0-9._/-]+\\.prom$')
+      - backup_orchestrator_max_artifact_bytes is integer
+      - backup_orchestrator_max_artifact_bytes > 0
+      - backup_orchestrator_service_timeout_seconds is integer
+      - backup_orchestrator_service_timeout_seconds > 0
+      - backup_orchestrator_ssh_connect_timeout_seconds is integer
+      - backup_orchestrator_ssh_connect_timeout_seconds > 0
+      - backup_orchestrator_ssh_server_alive_interval_seconds is integer
+      - backup_orchestrator_ssh_server_alive_interval_seconds > 0
+      - backup_orchestrator_ssh_server_alive_count_max is integer
+      - backup_orchestrator_ssh_server_alive_count_max > 0
+      - backup_orchestrator_b2_bucket is string
+      - backup_orchestrator_b2_bucket is match('^[A-Za-z0-9][A-Za-z0-9._-]*$')
+      - backup_orchestrator_targets is sequence
+      - backup_orchestrator_targets is not string
+      - backup_orchestrator_targets | length > 0
+      - backup_orchestrator_known_hosts is sequence
+      - backup_orchestrator_known_hosts is not string
+      - backup_orchestrator_targets | map(attribute='repository_prefix') | list | unique | length == backup_orchestrator_targets | length
+
+- name: Validate backup source SSH host-key pins
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: Each SSH host-key pin needs a host, supported key type, and base64 public key blob.
+    that:
+      - item is mapping
+      - item.host is defined
+      - item.host is string
+      - item.host is match('^[A-Za-z0-9][A-Za-z0-9.-]*$')
+      - item.key_type is defined
+      - item.key_type in ['ssh-ed25519', 'ecdsa-sha2-nistp256', 'rsa-sha2-512', 'rsa-sha2-256']
+      - item.public_key is defined
+      - item.public_key is string
+      - item.public_key is match('^[A-Za-z0-9+/=]+$')
+  loop: "{{ backup_orchestrator_known_hosts }}"
+  loop_control:
+    label: "{{ item.host | default('unnamed-host') }}"
+
+- name: Validate backup target structures
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: Each target needs a name, host, repository_prefix, and retention mapping.
+    that:
+      - item is mapping
+      - item.name is defined
+      - item.name is string
+      - item.name is match('^[a-z0-9][a-z0-9-]*$')
+      - item.host is defined
+      - item.host is string
+      - item.host is match('^[A-Za-z0-9][A-Za-z0-9.-]*$')
+      - item.repository_prefix is defined
+      - item.repository_prefix is string
+      - item.repository_prefix is match('^[A-Za-z0-9][A-Za-z0-9._/-]*$')
+      - "'..' not in item.repository_prefix"
+      - "'//' not in item.repository_prefix"
+      - "'/./' not in item.repository_prefix"
+      - not item.repository_prefix.endswith('/')
+      - item.retention is defined
+      - item.retention is mapping
+      - backup_orchestrator_known_hosts | selectattr('host', 'equalto', item.host) | list | length == 1
+  loop: "{{ backup_orchestrator_targets }}"
+  loop_control:
+    label: "{{ item.name | default('unnamed target') }}"
+
+- name: Validate backup target retention policies
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: Each retention policy needs non-negative integer daily, weekly, monthly, and yearly values.
+    that:
+      - item.retention.keep_daily is defined
+      - item.retention.keep_daily is integer
+      - item.retention.keep_daily >= 0
+      - item.retention.keep_weekly is defined
+      - item.retention.keep_weekly is integer
+      - item.retention.keep_weekly >= 0
+      - item.retention.keep_monthly is defined
+      - item.retention.keep_monthly is integer
+      - item.retention.keep_monthly >= 0
+      - item.retention.keep_yearly is defined
+      - item.retention.keep_yearly is integer
+      - item.retention.keep_yearly >= 0
+  loop: "{{ backup_orchestrator_targets }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Validate externally supplied backup secrets
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: Supply B2 credentials, the Restic password, and the central SSH private key from an external secret source.
+    that:
+      - backup_orchestrator_b2_account_id is string
+      - backup_orchestrator_b2_account_id | length > 0
+      - backup_orchestrator_b2_account_key is string
+      - backup_orchestrator_b2_account_key | length > 0
+      - backup_orchestrator_restic_password is string
+      - backup_orchestrator_restic_password | length > 0
+      - backup_orchestrator_ssh_private_key is string
+      - backup_orchestrator_ssh_private_key | length > 0
+  no_log: true
+
+- name: Ensure backup orchestrator packages are present
+  ansible.builtin.package:
+    name: "{{ backup_orchestrator_packages }}"
+    state: present
+
+- name: Ensure backup orchestrator directories are root-owned
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop:
+    - path: "{{ backup_orchestrator_root_dir }}"
+      mode: '0700'
+    - path: "{{ backup_orchestrator_staging_dir }}"
+      mode: '0700'
+    - path: "{{ backup_orchestrator_cache_dir }}"
+      mode: '0700'
+    - path: "{{ backup_orchestrator_config_dir }}"
+      mode: '0750'
+    - path: "{{ backup_orchestrator_secrets_dir }}"
+      mode: '0700'
+    - path: "{{ backup_orchestrator_metric_path | dirname }}"
+      mode: '0755'
+
+- name: Write root-only B2 credential environment
+  ansible.builtin.template:
+    src: backup-runtime.conf.j2
+    dest: "{{ backup_orchestrator_b2_credentials_path }}"
+    owner: root
+    group: root
+    mode: '0600'
+  no_log: true
+
+- name: Write root-only Restic password file
+  ansible.builtin.copy:
+    content: "{{ backup_orchestrator_restic_password }}\n"
+    dest: "{{ backup_orchestrator_restic_password_path }}"
+    owner: root
+    group: root
+    mode: '0600'
+  no_log: true
+
+- name: Write root-only central SSH private key
+  ansible.builtin.copy:
+    content: "{{ backup_orchestrator_ssh_private_key }}"
+    dest: "{{ backup_orchestrator_ssh_private_key_path }}"
+    owner: root
+    group: root
+    mode: '0600'
+  no_log: true
+
+- name: Install managed source SSH host-key pins
+  ansible.builtin.template:
+    src: known_hosts.j2
+    dest: "{{ backup_orchestrator_known_hosts_path }}"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Install the fixed central backup runner
+  ansible.builtin.template:
+    src: homelab-backup-run.j2
+    dest: "{{ backup_orchestrator_runner_path }}"
+    owner: root
+    group: root
+    mode: '0700'
+
+- name: Install central backup systemd service
+  ansible.builtin.template:
+    src: homelab-backup.service.j2
+    dest: "/etc/systemd/system/{{ backup_orchestrator_service_name }}"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Install central backup systemd timer
+  ansible.builtin.template:
+    src: homelab-backup.timer.j2
+    dest: "/etc/systemd/system/{{ backup_orchestrator_timer_name }}"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Enable central backup schedule
+  ansible.builtin.systemd_service:
+    name: "{{ backup_orchestrator_timer_name }}"
+    enabled: true
+    state: started
+    daemon_reload: true

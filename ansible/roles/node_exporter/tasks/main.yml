@@ -55,7 +55,10 @@
     content: |
       [Service]
       ExecStart=
-      ExecStart={{ ([node_exporter_binary_path] + node_exporter_default_flags + node_exporter_extra_flags) | join(' ') }}
+      ExecStart={{
+        ([node_exporter_binary_path] + node_exporter_default_flags +
+        node_exporter_extra_flags) | join(' ')
+      }}
   register: node_exporter_systemd_override_result
   notify:
     - Reload systemd

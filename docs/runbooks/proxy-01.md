@@ -18,9 +18,9 @@ Tracked proxy routes in repo:
 - `proxmox.idios` → `https://192.168.1.1:8006`
 - `adguard.idios` → `http://192.168.1.252`
 
-Additional configured upstreams that are not backed by tracked Terraform guests in this repo:
-- `booklore.idios` → `http://192.168.1.51:6060`
-- `vault.idios` → `https://vault.lo0r.de`
+Additional configured upstreams:
+- `vault.idios` → redirects to `https://lo0orde.duckdns.org`
+- `lo0orde.duckdns.org` → `http://192.168.1.5:8000` (Vaultwarden VM 101)
 
 ## 2. Truth sources
 
@@ -29,7 +29,7 @@ Use these files as tracked source of truth:
 - `ansible/playbooks/proxy.yml`
 - `ansible/playbooks/site.yml`
 - `ansible/inventories/homelab/hosts.yml`
-- `ansible/inventories/homelab/host_vars/proxy-01.yml`
+- `ansible/inventories/homelab/host_vars/proxy-01/main.yml`
 - `ansible/roles/nginx/tasks/main.yml`
 
 ## 3. Prerequisites and manual inputs
@@ -62,7 +62,7 @@ terraform apply
 From `ansible/`:
 
 ```bash
-ansible-playbook playbooks/proxy.yml --syntax-check
+sh ./run-playbook.sh playbooks/proxy.yml --syntax-check
 ansible-playbook playbooks/site.yml --syntax-check
 ```
 
@@ -85,14 +85,19 @@ sudo chmod 0600 /etc/nginx/secrets/idios.key
 ### Apply the reverse proxy
 
 ```bash
-ansible-playbook playbooks/proxy.yml --limit proxy-01
+sh ./run-playbook.sh playbooks/proxy.yml --limit proxy-01
 ```
 
-Or as part of the full host config:
+For steady-state Nginx configuration only, after every required TLS file already
+exists on the host:
 
 ```bash
 ansible-playbook playbooks/site.yml --limit proxy-01
 ```
+
+Do not use this path for an initial rebuild or when DuckDNS certificate issuance
+is required. Use the dedicated wrapper command above so `acme_duckdns` receives
+the required untracked `DUCKDNS_TOKEN`.
 
 ## 8. Validation
 
@@ -104,7 +109,6 @@ sudo nginx -t
 systemctl status nginx --no-pager
 curl -kI -H 'Host: proxmox.idios' https://127.0.0.1/
 curl -kI -H 'Host: adguard.idios' https://127.0.0.1/
-curl -kI -H 'Host: booklore.idios' https://127.0.0.1/
 curl -kI -H 'Host: vault.idios' https://127.0.0.1/
 curl -fsS http://127.0.0.1:9100/metrics >/dev/null
 ```
@@ -114,7 +118,6 @@ curl -fsS http://127.0.0.1:9100/metrics >/dev/null
 Confirm your local DNS resolves the `.idios` names to `192.168.1.3`, then open:
 - `https://proxmox.idios`
 - `https://adguard.idios`
-- `https://booklore.idios`
 - `https://vault.idios`
 
 ### Monitoring checks
@@ -137,10 +140,56 @@ Reverse proxying helps, but it does not guarantee iframe embedding will work.
 
 - **Proxmox**: poor iframe candidate due to admin-console security, origin sensitivity, and websocket complexity
 - **AdGuard Home**: possible, but still an admin UI and not ideal for framing
-- **BookLore**: the best candidate of the current set, but still verify headers and cookies
 - **Vaultwarden**: strongly discouraged to embed because it is a password manager and depends on strict origin and websocket behavior
 
-## 9. Recovery
+## 9. Backup and restore
+
+`backup-01` collects the required TLS pair without stopping or reloading Nginx:
+
+- `/etc/nginx/secrets/idios.crt` → `nginx/idios.crt`
+- `/etc/nginx/secrets/idios.key` → `nginx/idios.key`
+
+The files are stored under the independent Restic prefix
+`homelab/proxy-01`. The certificate and key must be restored together; do not
+restore one file from a different snapshot than the other.
+
+After a backup has run, validate its snapshot and restore to a protected
+temporary directory on `backup-01`:
+
+```bash
+ssh debian@backup-01
+sudo -i
+read -rsp 'B2 account ID: ' B2_ACCOUNT_ID; echo
+read -rsp 'B2 account key: ' B2_ACCOUNT_KEY; echo
+read -rsp 'B2 bucket: ' B2_BUCKET; echo
+export B2_ACCOUNT_ID B2_ACCOUNT_KEY B2_BUCKET
+export RESTIC_PASSWORD_FILE=/etc/homelab-backup/secrets/restic-password
+repo="b2:${B2_BUCKET}:homelab/proxy-01"
+restore_dir=$(mktemp -d /root/restore-proxy-01.XXXXXX)
+restic -r "$repo" snapshots --tag proxy-01
+restic -r "$repo" restore <snapshot-id> --target "$restore_dir"
+manifest=$(find "$restore_dir" -type f -name manifest -print -quit)
+test -n "$manifest"
+payload=$(dirname "$manifest")
+(cd "$payload" && sha256sum -c --strict checksums.sha256)
+crt=$(find "$restore_dir" -type f -name idios.crt -print -quit)
+key=$(find "$restore_dir" -type f -name idios.key -print -quit)
+test -n "$crt" && test -n "$key"
+```
+
+Obtain credentials from the approved external secret source; do not source
+`backup-runtime.conf`, which the runner parses as data. Restic preserves the
+original staging path below `"$restore_dir"`, so use `"$crt"` and `"$key"`
+rather than assumed paths. Compare the validated pair with the intended source
+and copy both files back as root with their original ownership and modes.
+Validate with `sudo nginx -t`, then reload Nginx only if the restored pair is
+being put into service. Never commit TLS material, Restic credentials, private
+keys, or password hashes; use untracked external variables for those values.
+
+The tracked repository does not attest to a completed backup or restore; record
+any live validation in the operator-managed backup inventory.
+
+## 10. Recovery
 
 If routing breaks:
 - run `sudo nginx -t`
@@ -152,7 +201,8 @@ If a route fails but Nginx is healthy:
 - confirm the upstream service is still reachable
 - confirm local DNS still points the `.idios` names at `192.168.1.3`
 
-## 10. Related docs
+## 11. Related docs
 
 - `docs/runbooks/platform-operations.md` for repo-wide apply order
+- `docs/runbooks/manual-recovery.md` for full-platform or service recovery
 - `ansible/README.md` for playbook entrypoints

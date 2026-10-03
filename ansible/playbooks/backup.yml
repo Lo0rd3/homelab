@@ -1,0 +1,14 @@
+---
+- name: Configure the central backup VM
+  hosts: backup
+  become: true
+  roles:
+    - role: baseline
+    - role: node_exporter
+    - role: backup_orchestrator
+
+- name: Configure restricted backup exports on declared pilot sources
+  hosts: backup_source_export_hosts
+  become: true
+  roles:
+    - role: backup_source_export

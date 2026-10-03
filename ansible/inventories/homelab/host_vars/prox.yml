@@ -2,6 +2,6 @@
 # Host-specific values for the Proxmox host automation step.
 ansible_user: root
 
-proxmox_lxc_ctid: 201
+proxmox_lxc_tunnel_access_ctid: 201
 adguard_proxmox_host_file_exports_ctid: 202
 adguard_proxmox_lxc_ssh_bootstrap_ctid: 202

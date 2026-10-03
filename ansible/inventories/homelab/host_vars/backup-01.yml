@@ -1,0 +1,65 @@
+---
+# Host-specific non-secret contract for the central Debian backup VM.
+ansible_user: debian
+
+# Permit Prometheus on monitoring-01 to scrape node_exporter. The textfile
+# collector exposes the root-owned status file written by backup_orchestrator.
+node_exporter_web_listen_host: 0.0.0.0
+node_exporter_extra_flags:
+  - --collector.textfile.directory=/var/lib/node_exporter/textfile_collector
+
+# B2 credentials, the Restic password, and this host's SSH private key must be
+# supplied from an untracked external secret source when the playbook is run.
+backup_orchestrator_b2_bucket: replace-with-backblaze-b2-bucket
+backup_orchestrator_schedule: '*-*-* 02:00:00'
+backup_orchestrator_known_hosts:
+  - host: 192.168.1.252
+    key_type: ssh-ed25519
+    public_key: AAAAC3NzaC1lZDI1NTE5AAAAIE22OTQT6xW5UZSZYrr73taeeAB3FX6yeqXYJUVZJ+Hq
+  - host: 192.168.1.3
+    key_type: ssh-ed25519
+    public_key: AAAAC3NzaC1lZDI1NTE5AAAAIDvTPkiqkIMd36Nay3ApQcWoj+diIuVYPnrTZgqCL76V
+  - host: 192.168.1.87
+    key_type: ssh-ed25519
+    public_key: AAAAC3NzaC1lZDI1NTE5AAAAIPZWlagd9ZzvhNmkN8eFV8U3i6Kg9D0IwD9pysfK201A
+  # Verified from vaultwarden-01 through an authenticated SSH session before enrollment.
+  - host: 192.168.1.5
+    key_type: ssh-ed25519
+    public_key: AAAAC3NzaC1lZDI1NTE5AAAAIIisZpP0WPc9/8Qocmc28rywd1pfN4fkNkPvoOeu3Q3B
+backup_orchestrator_targets:
+  - name: adguard-01
+    host: 192.168.1.252
+    repository_prefix: homelab/adguard-01
+    retention:
+      keep_daily: 7
+      keep_weekly: 4
+      keep_monthly: 12
+      keep_yearly: 2
+  - name: proxy-01
+    host: 192.168.1.3
+    repository_prefix: homelab/proxy-01
+    retention:
+      keep_daily: 7
+      keep_weekly: 4
+      keep_monthly: 12
+      keep_yearly: 2
+  - name: monitoring-01
+    host: 192.168.1.87
+    repository_prefix: homelab/monitoring-01
+    retention:
+      keep_daily: 7
+      keep_weekly: 4
+      keep_monthly: 12
+      keep_yearly: 2
+  - name: vaultwarden-01
+    host: 192.168.1.5
+    repository_prefix: homelab/vaultwarden-01
+    retention:
+      keep_daily: 7
+      keep_weekly: 4
+      keep_monthly: 12
+      keep_yearly: 2
+
+# The runner atomically replaces this textfile after every target result while
+# retaining success and failure timestamp series for every configured target.
+backup_orchestrator_metric_path: /var/lib/node_exporter/textfile_collector/homelab_backup.prom

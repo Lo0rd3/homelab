@@ -2,7 +2,7 @@
 - name: Validate Nginx role inputs
   ansible.builtin.assert:
     quiet: true
-    fail_msg: Nginx role expects Debian 12, absolute TLS secret paths, and a list of vhost definitions with server_name and upstream_url.
+    fail_msg: Nginx role expects Debian 12, absolute TLS secret paths, and vhosts with a server_name plus either an upstream_url or redirect_url.
     that:
       - ansible_facts["distribution"] == 'Debian'
       - ansible_facts["distribution_major_version"] == '12'
@@ -10,13 +10,34 @@
       - nginx_vhosts is not string
       - nginx_vhosts | length > 0
       - nginx_vhosts | map(attribute='server_name') | list | length == nginx_vhosts | length
-      - nginx_vhosts | map(attribute='upstream_url') | list | length == nginx_vhosts | length
+      - >-
+        nginx_vhosts | rejectattr('upstream_url', 'defined') |
+        rejectattr('redirect_url', 'defined') | list | length == 0
+      - >-
+        nginx_vhosts | selectattr('upstream_url', 'defined') |
+        map(attribute='upstream_url') | select('match', '^https?://') | list | length
+        == nginx_vhosts | selectattr('upstream_url', 'defined') | list | length
+      - >-
+        nginx_vhosts | selectattr('redirect_url', 'defined') |
+        map(attribute='redirect_url') | select('match', '^https://[^/]+$') | list | length
+        == nginx_vhosts | selectattr('redirect_url', 'defined') | list | length
       - nginx_tls_secret_directory is string
       - nginx_tls_secret_directory is match('^/')
       - nginx_tls_certificate_path is string
       - nginx_tls_certificate_path is match('^/')
       - nginx_tls_private_key_path is string
       - nginx_tls_private_key_path is match('^/')
+      - >-
+        nginx_vhosts | selectattr('tls_certificate_path', 'defined') | list | length
+        == nginx_vhosts | selectattr('tls_private_key_path', 'defined') | list | length
+      - >-
+        nginx_vhosts | selectattr('tls_certificate_path', 'defined') |
+        map(attribute='tls_certificate_path') | select('match', '^/') | list | length
+        == nginx_vhosts | selectattr('tls_certificate_path', 'defined') | list | length
+      - >-
+        nginx_vhosts | selectattr('tls_private_key_path', 'defined') |
+        map(attribute='tls_private_key_path') | select('match', '^/') | list | length
+        == nginx_vhosts | selectattr('tls_private_key_path', 'defined') | list | length
 
 - name: Ensure Nginx TLS secrets directory exists
   ansible.builtin.file:
@@ -64,6 +85,55 @@
     group: root
     mode: '0600'
 
+- name: Check per-vhost Nginx TLS certificate files exist
+  ansible.builtin.stat:
+    path: "{{ item.tls_certificate_path }}"
+  loop: "{{ nginx_vhosts | selectattr('tls_certificate_path', 'defined') | list }}"
+  loop_control:
+    label: "{{ item.server_name }}"
+  register: nginx_vhost_tls_certificate_stats
+
+- name: Check per-vhost Nginx TLS private key files exist
+  ansible.builtin.stat:
+    path: "{{ item.tls_private_key_path }}"
+  loop: "{{ nginx_vhosts | selectattr('tls_private_key_path', 'defined') | list }}"
+  loop_control:
+    label: "{{ item.server_name }}"
+  register: nginx_vhost_tls_private_key_stats
+
+- name: Assert per-vhost Nginx TLS files are present
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: "A per-vhost TLS certificate or private key is missing."
+    that:
+      - item.stat.exists
+      - item.stat.isreg
+  loop: "{{ nginx_vhost_tls_certificate_stats.results + nginx_vhost_tls_private_key_stats.results }}"
+  loop_control:
+    label: "{{ item.item.server_name }}"
+
+- name: Enforce per-vhost Nginx TLS certificate permissions
+  ansible.builtin.file:
+    path: "{{ item.item.tls_certificate_path }}"
+    state: file
+    owner: root
+    group: root
+    mode: '0640'
+  loop: "{{ nginx_vhost_tls_certificate_stats.results }}"
+  loop_control:
+    label: "{{ item.item.server_name }}"
+
+- name: Enforce per-vhost Nginx TLS private key permissions
+  ansible.builtin.file:
+    path: "{{ item.item.tls_private_key_path }}"
+    state: file
+    owner: root
+    group: root
+    mode: '0600'
+  loop: "{{ nginx_vhost_tls_private_key_stats.results }}"
+  loop_control:
+    label: "{{ item.item.server_name }}"
+
 - name: Ensure Nginx package is present
   ansible.builtin.apt:
     name: nginx
@@ -83,7 +153,7 @@
     owner: root
     group: root
     mode: '0644'
-  register: nginx_proxy_config
+  notify: Reload Nginx
 
 - name: Validate Nginx configuration
   ansible.builtin.command: nginx -t
@@ -94,9 +164,3 @@
     name: nginx
     enabled: true
     state: started
-
-- name: Reload Nginx when reverse proxy config changes
-  ansible.builtin.service:
-    name: nginx
-    state: reloaded
-  when: nginx_proxy_config.changed

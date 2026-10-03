@@ -1,0 +1,14 @@
+---
+services:
+  vaultwarden:
+    image: {{ vaultwarden_docker_image }}
+    restart: {{ vaultwarden_docker_restart_policy }}
+    env_file:
+      - {{ vaultwarden_docker_env_file }}
+    environment:
+      DOMAIN: {{ vaultwarden_docker_domain }}
+      SIGNUPS_ALLOWED: {{ vaultwarden_docker_signups_allowed | ternary('true', 'false') }}
+    ports:
+      - "{{ vaultwarden_docker_listen_address }}:{{ vaultwarden_docker_port }}:80"
+    volumes:
+      - {{ vaultwarden_docker_data_directory }}:/data

@@ -1,6 +1,8 @@
 ---
 # Host-specific values for monitoring-01.
 ansible_user: debian
+# Matches Terraform, inventory, Prometheus targets, and the backup target.
+monitoring_host_address: 192.168.1.87
 monitoring_compose_project_src: "{{ docker_compose_base_dir }}/{{ monitoring_stack_name }}"
 monitoring_compose_files:
   - "{{ monitoring_compose_file_name }}"
@@ -8,6 +10,14 @@ monitoring_compose_env_files:
   - "{{ monitoring_compose_env_file_name }}"
 monitoring_config_root: /opt/monitoring/config
 monitoring_data_root: /opt/monitoring/data
+
+# Application data requires a consistency design and is deliberately excluded.
+backup_source_export_central_source_address: 192.168.1.4
+backup_source_export_target_name: monitoring-01
+backup_source_export_sources:
+  - source_path: /etc/monitoring/secrets/grafana_admin_password
+    relative_path: grafana_admin_password
+    required: true
 
 monitoring_prometheus_port: 9090
 monitoring_grafana_port: 3000

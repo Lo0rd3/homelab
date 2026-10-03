@@ -10,4 +10,7 @@ galaxy_info:
       versions:
         - bookworm
 
-dependencies: []
+# The monitoring stack uses Docker Compose, so make standalone monitoring runs
+# provision its engine before any monitoring role tasks execute.
+dependencies:
+  - role: docker

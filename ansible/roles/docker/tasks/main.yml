@@ -50,12 +50,26 @@
     mode: '0644'
 
 - name: Configure Docker APT repository
-  ansible.builtin.apt_repository:
-    repo: >-
-      deb [arch={{ docker_apt_arch }} signed-by={{ docker_apt_keyring_path }}]
-      {{ docker_apt_repo_url }} {{ docker_apt_release }} {{ docker_apt_repo_component }}
-    filename: docker
+  ansible.builtin.deb822_repository:
+    name: docker
+    types:
+      - deb
+    uris:
+      - "{{ docker_apt_repo_url }}"
+    suites:
+      - "{{ docker_apt_release }}"
+    components:
+      - "{{ docker_apt_repo_component }}"
+    architectures:
+      - "{{ docker_apt_arch }}"
+    signed_by: "{{ docker_apt_keyring_path }}"
     state: present
+  register: docker_apt_repository
+
+- name: Refresh APT cache after Docker repository changes
+  ansible.builtin.apt:
+    update_cache: true
+  when: docker_apt_repository is changed
 
 - name: Ensure Docker packages are present
   ansible.builtin.apt:

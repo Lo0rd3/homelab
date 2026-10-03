@@ -3,4 +3,6 @@
   hosts: proxy
   become: true
   roles:
+    - role: acme_duckdns
+      when: acme_duckdns_enabled | default(false) | bool
     - role: nginx

@@ -1,0 +1,11 @@
+# Managed by Ansible: global key-only SSH; backup exporter remains source-bound.
+PubkeyAuthentication yes
+AuthenticationMethods publickey
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+
+Match User {{ backup_source_export_user }}
+    DisableForwarding yes
+    PermitTTY no
+    PermitUserRC no
+Match all

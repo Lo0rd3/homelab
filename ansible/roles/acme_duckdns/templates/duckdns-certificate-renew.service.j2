@@ -1,0 +1,8 @@
+[Unit]
+Description=Obtain or renew the DuckDNS ACME certificate
+After=network-online.target nginx.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/renew-duckdns-certificate

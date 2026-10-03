@@ -1,0 +1,63 @@
+#!/bin/sh
+# This command is reached only through a forced SSH authorized_keys entry.
+set -eu
+umask 077
+
+export_root='{{ backup_source_export_export_root }}'
+current_export="$export_root/current"
+previous_export="$export_root/previous"
+lock_dir="$export_root/.lock"
+
+if [ "$#" -ne 0 ]; then
+  exit 64
+fi
+
+if ! mkdir "$lock_dir" 2>/dev/null; then
+  exit 75
+fi
+
+work_dir=$(mktemp -d "$export_root/.export.XXXXXX")
+cleanup() {
+  rm -rf "$work_dir" "$lock_dir"
+}
+trap cleanup EXIT HUP INT TERM
+
+export_file() {
+  source_path=$1
+  relative_path=$2
+  required=$3
+
+  if [ ! -f "$source_path" ] || [ -L "$source_path" ]; then
+    [ "$required" = false ] && return 0
+    exit 66
+  fi
+
+  mkdir -p "$work_dir/$(dirname "$relative_path")"
+  cp "$source_path" "$work_dir/$relative_path"
+  (cd "$work_dir" && sha256sum "$relative_path") >> "$work_dir/checksums.sha256"
+  printf '%s\n' "$relative_path" >> "$work_dir/files"
+}
+
+{% for source in backup_source_export_sources %}
+export_file '{{ source.source_path }}' '{{ source.relative_path }}' '{{ source.required | ternary('true', 'false') }}'
+{% endfor %}
+
+created_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+{
+  printf 'format_version=1\n'
+  printf 'target=%s\n' '{{ backup_source_export_target_name }}'
+  printf 'created_at=%s\n' "$created_at"
+  printf 'checksum_file=checksums.sha256\n'
+  printf 'files_file=files\n'
+} > "$work_dir/manifest"
+
+rm -rf "$previous_export"
+[ ! -d "$current_export" ] || mv "$current_export" "$previous_export"
+mv "$work_dir" "$current_export"
+work_dir=''
+rm -rf "$previous_export"
+rmdir "$lock_dir"
+trap - EXIT HUP INT TERM
+
+# Stream the immutable, fixed export. The caller cannot select a path or command.
+exec tar -C "$current_export" -cf - .

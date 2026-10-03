@@ -1,0 +1,101 @@
+---
+- name: Validate DuckDNS ACME configuration
+  ansible.builtin.assert:
+    quiet: true
+    fail_msg: >-
+      DuckDNS ACME requires a valid duckdns.org hostname, ACME email, and a
+      non-empty DUCKDNS_TOKEN supplied through the controller environment.
+    that:
+      - acme_duckdns_domain is match('^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.duckdns\.org$')
+      - acme_duckdns_email is match('^[^@\s]+@[^@\s]+\.[^@\s]+$')
+      - acme_duckdns_token is string
+      - acme_duckdns_token | length > 0
+      - acme_duckdns_secret_file is match('^/')
+      - acme_duckdns_state_directory is match('^/')
+      - acme_duckdns_tls_directory is match('^/')
+      - acme_duckdns_certificate_path is match('^/')
+      - acme_duckdns_private_key_path is match('^/')
+      - acme_duckdns_renew_days | int > 0
+      - acme_duckdns_renew_days | int < 90
+
+- name: Install the Lego ACME client
+  ansible.builtin.apt:
+    name:
+      - lego
+      - nginx
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Create Nginx TLS directory for DuckDNS certificate deployment
+  ansible.builtin.file:
+    path: "{{ acme_duckdns_tls_directory }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0750'
+
+- name: Create DuckDNS ACME state directory
+  ansible.builtin.file:
+    path: "{{ acme_duckdns_state_directory }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
+- name: Create DuckDNS token directory
+  ansible.builtin.file:
+    path: "{{ acme_duckdns_secret_file | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
+- name: Write root-only DuckDNS token environment file
+  ansible.builtin.copy:
+    dest: "{{ acme_duckdns_secret_file }}"
+    content: "DUCKDNS_TOKEN={{ acme_duckdns_token }}\n"
+    owner: root
+    group: root
+    mode: '0600'
+  no_log: true
+
+- name: Install DuckDNS certificate renewal script
+  ansible.builtin.template:
+    src: renew-duckdns-certificate.sh.j2
+    dest: /usr/local/sbin/renew-duckdns-certificate
+    owner: root
+    group: root
+    mode: '0700'
+
+- name: Install DuckDNS certificate renewal service
+  ansible.builtin.template:
+    src: duckdns-certificate-renew.service.j2
+    dest: /etc/systemd/system/duckdns-certificate-renew.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload systemd
+
+- name: Install DuckDNS certificate renewal timer
+  ansible.builtin.template:
+    src: duckdns-certificate-renew.timer.j2
+    dest: /etc/systemd/system/duckdns-certificate-renew.timer
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload systemd
+
+- name: Apply systemd unit changes before certificate issuance
+  ansible.builtin.meta: flush_handlers
+
+- name: Obtain or renew DuckDNS certificate
+  ansible.builtin.systemd:
+    name: duckdns-certificate-renew.service
+    state: started
+
+- name: Enable daily DuckDNS certificate renewal
+  ansible.builtin.systemd:
+    name: duckdns-certificate-renew.timer
+    enabled: true
+    state: started

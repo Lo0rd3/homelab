@@ -3,6 +3,7 @@ module "vms" {
   source   = "../../modules/vm"
 
   node_name               = var.target_node_name
+  vm_id                   = each.value.vm_id
   guest_name              = each.value.guest_name
   clone_source_vm_id      = each.value.clone_source_vm_id
   cpu_cores               = each.value.cpu_cores

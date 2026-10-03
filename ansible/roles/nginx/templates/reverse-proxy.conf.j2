@@ -17,13 +17,18 @@ server {
     listen [::]:443 ssl;
     server_name {{ vhost.server_name }};
 
-    ssl_certificate {{ nginx_tls_certificate_path }};
-    ssl_certificate_key {{ nginx_tls_private_key_path }};
+    ssl_certificate {{ vhost.tls_certificate_path | default(nginx_tls_certificate_path) }};
+    ssl_certificate_key {{ vhost.tls_private_key_path | default(nginx_tls_private_key_path) }};
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 10m;
 
+{% if vhost.redirect_url | default('') %}
+    return 308 {{ vhost.redirect_url }}$request_uri;
+{% else %}
     location / {
-        proxy_pass {{ vhost.upstream_url }};
+        resolver 1.1.1.1 8.8.8.8 valid=30s;
+        set $homelab_upstream {{ vhost.upstream_url }};
+        proxy_pass $homelab_upstream;
         proxy_http_version {{ vhost.proxy_http_version | default('1.1') }};
         proxy_set_header Host {{ vhost.proxy_host | default('$host') }};
         proxy_set_header X-Real-IP $remote_addr;
@@ -41,6 +46,7 @@ server {
         proxy_ssl_name {{ vhost.proxy_ssl_name | default(vhost.proxy_host) }};
 {% endif %}
     }
+{% endif %}
 }
 
 {% endfor %}

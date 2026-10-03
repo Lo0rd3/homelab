@@ -30,6 +30,8 @@ monitoring_grafana_admin_password_file: "{{ monitoring_runtime_secrets_root }}/g
 
 monitoring_restart_policy: unless-stopped
 monitoring_grafana_admin_user: admin
+# Compose owns the loopback bind address. Published-port values therefore use
+# only the host-port:container-port format and may not include an address.
 
 monitoring_directory_owner: root
 monitoring_directory_group: root

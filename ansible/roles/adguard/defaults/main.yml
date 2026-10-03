@@ -1,7 +1,7 @@
 ---
 # Safe, overridable defaults for a deterministic Alpine/OpenRC AdGuard Home role.
 # Keep secrets and restored runtime state outside git-tracked defaults.
-adguard_version: '0.107.73'
+adguard_version: '0.107.79'
 adguard_architecture_map:
   x86_64: amd64
   aarch64: arm64
@@ -9,7 +9,7 @@ adguard_architecture_map:
 adguard_release_architecture: "{{ adguard_architecture_map.get(ansible_facts['architecture'], ansible_facts['architecture']) }}"
 adguard_archive_name: "AdGuardHome_linux_{{ adguard_release_architecture }}.tar.gz"
 adguard_archive_url: "https://github.com/AdguardTeam/AdGuardHome/releases/download/v{{ adguard_version }}/{{ adguard_archive_name }}"
-# Prefer setting a release checksum from external vars for stricter supply-chain verification.
+# A SHA-256 for the selected release archive is required from host or group vars.
 adguard_archive_sha256: ''
 adguard_archive_path: "/var/tmp/{{ adguard_archive_name }}"
 adguard_required_packages:
@@ -41,3 +41,7 @@ adguard_temp_validation_mode: false
 adguard_temp_validation_ip: ''
 adguard_production_ip: ''
 adguard_disable_dhcp_during_validation: true
+adguard_api_url: http://127.0.0.1:3000
+adguard_api_username: "{{ lookup('ansible.builtin.env', 'ADGUARD_ADMIN_USERNAME', default='') }}"
+adguard_api_password: "{{ lookup('ansible.builtin.env', 'ADGUARD_ADMIN_PASSWORD', default='') }}"
+adguard_dns_rewrites: []

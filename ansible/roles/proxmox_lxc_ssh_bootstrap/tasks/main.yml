@@ -34,6 +34,42 @@
       - python3
   changed_when: true
 
+- name: Ensure Alpine OpenSSH privilege-separation directory is secure in the LXC
+  ansible.builtin.command:
+    argv:
+      - pct
+      - exec
+      - "{{ proxmox_lxc_ssh_bootstrap_ctid | string }}"
+      - --
+      - install
+      - -d
+      - -o
+      - root
+      - -g
+      - root
+      - -m
+      - '0755'
+      - /var/empty
+  changed_when: false
+
+- name: Ensure root home ownership and permissions are secure in the LXC
+  ansible.builtin.command:
+    argv:
+      - pct
+      - exec
+      - "{{ proxmox_lxc_ssh_bootstrap_ctid | string }}"
+      - --
+      - install
+      - -d
+      - -o
+      - root
+      - -g
+      - root
+      - -m
+      - '0700'
+      - /root
+  changed_when: false
+
 - name: Ensure root SSH directory exists in the LXC
   ansible.builtin.command:
     argv:
@@ -74,6 +110,12 @@
       - "{{ proxmox_lxc_ssh_bootstrap_ctid | string }}"
       - "{{ proxmox_lxc_ssh_bootstrap_tmp_authorized_keys_path }}"
       - /root/.ssh/authorized_keys
+      - --user
+      - root
+      - --group
+      - root
+      - --perms
+      - '0600'
   changed_when: true
 
 - name: Ensure authorized_keys permissions are correct in the LXC

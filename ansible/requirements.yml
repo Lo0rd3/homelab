@@ -1,0 +1,8 @@
+---
+# Keep non-builtin modules reproducible and available from the repository-local
+# collection path configured in ansible.cfg.
+collections:
+  - name: ansible.posix
+    version: 1.6.2
+  - name: community.docker
+    version: 4.8.1

@@ -1,0 +1,12 @@
+---
+# Disabled until a DuckDNS name, ACME email, and root-only token file are supplied.
+acme_duckdns_enabled: false
+acme_duckdns_domain: ''
+acme_duckdns_email: ''
+acme_duckdns_token: "{{ lookup('ansible.builtin.env', 'DUCKDNS_TOKEN', default='') }}"
+acme_duckdns_secret_file: /etc/lego/duckdns.env
+acme_duckdns_state_directory: /var/lib/lego
+acme_duckdns_tls_directory: /etc/nginx/secrets
+acme_duckdns_certificate_path: "{{ acme_duckdns_tls_directory }}/{{ acme_duckdns_domain }}.crt"
+acme_duckdns_private_key_path: "{{ acme_duckdns_tls_directory }}/{{ acme_duckdns_domain }}.key"
+acme_duckdns_renew_days: 30

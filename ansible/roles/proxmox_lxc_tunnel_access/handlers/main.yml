@@ -1,0 +1,8 @@
+---
+- name: Restart LXC after Proxmox host config changes
+  ansible.builtin.command:
+    argv:
+      - pct
+      - reboot
+      - "{{ proxmox_lxc_tunnel_access_ctid | string }}"
+  changed_when: true

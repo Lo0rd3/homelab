@@ -1,0 +1,12 @@
+---
+# Host-specific desired state for the Debian Docker replacement VM.
+ansible_user: debian
+vaultwarden_docker_deploy: true
+vaultwarden_docker_domain: https://lo0orde.duckdns.org
+vaultwarden_docker_listen_address: 192.168.1.5
+node_exporter_web_listen_host: 0.0.0.0
+
+# The central source key is supplied only from untracked external inventory data.
+# Allow the managed backup VM to invoke the fixed exporter.
+backup_source_export_central_source_address: 192.168.1.4
+backup_source_export_vaultwarden_enabled: true
