@@ -193,8 +193,9 @@ In Grafana, I expect:
 ### Restore from the central backup pilot
 
 Use this only after `backup-01` has a validated `adguard-01` snapshot. The
-backup stores `AdGuardHome.yaml` and, when present, `data/leases.json` with an
-export manifest and SHA-256 checksums.
+The service backup stores `AdGuardHome.yaml` and, when present, `data/leases.json`
+with a manifest for the service backup and SHA-256 checksums.
+k
 
 On `backup-01`, restore the desired tagged snapshot to a root-only temporary
 directory. Do not copy the secret files or the entire staging directory to
@@ -237,7 +238,7 @@ then stop AdGuard before replacing state:
 ```bash
 rc-service AdGuardHome stop
 install -o root -g root -m 0600 <restored-AdGuardHome.yaml> /etc/adguardhome/AdGuardHome.yaml
-# Only when present in the validated export and lease recovery is required:
+# Only when present in the validated service backup and lease recovery is required:
 install -o root -g root -m 0600 <restored-leases.json> /var/lib/adguardhome/data/leases.json
 /opt/AdGuardHome/AdGuardHome --config /etc/adguardhome/AdGuardHome.yaml --work-dir /var/lib/adguardhome --check-config
 rc-service AdGuardHome start

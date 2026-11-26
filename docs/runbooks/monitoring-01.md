@@ -167,7 +167,7 @@ on backup alerts until the rendered rules pass `promtool` validation. Check the
 textfile metrics and backup service manually until that check succeeds.
 
 The metric file, Prometheus configuration, and alert annotations must never
-contain B2 credentials, Restic passwords, SSH private keys, or exported data.
+contain B2 credentials, Restic passwords, SSH private keys, or service backup data.
 
 In Grafana:
 - log in with the configured admin user

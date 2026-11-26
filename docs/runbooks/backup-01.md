@@ -2,7 +2,8 @@
 
 `backup-01` is the central Debian 12 Restic backup VM. Terraform creates its
 single 40 GB VM disk; Ansible configures collection, Restic, the timer, and the
-restricted source export account. It collects the approved exports from
+restricted source account for service backups. It collects the approved service
+backups from
 `adguard-01`, `proxy-01`, `monitoring-01`, and `vaultwarden-01`.
 
 ## 1. Prerequisites and operator-managed inputs
@@ -32,19 +33,20 @@ The role writes the first four to root-only files on `backup-01`:
 
 The tracked inventory and Terraform example assign `backup-01` the managed
 address `192.168.1.4`; keep any address changes synchronized across Terraform,
-inventory, monitoring targets, and source-export allowlists. Replace the B2
+inventory, monitoring targets, and source allowlists for service backups. Replace the B2
 bucket placeholder before applying. Verify each source host's SSH host key out
 of band and record its pin in `backup_orchestrator_known_hosts`; Ansible writes
 the managed file at `/etc/homelab-backup/known_hosts`, which collection uses
 with strict host-key checking.
 
 Never commit the inputs above, generated secret files, source key material, or
-exported files. Supply credentials, private keys, and password hashes only
+service backup files. Supply credentials, private keys, and password hashes only
 through untracked external variables (for example, `homelab-backup-secrets.yml`).
 
 ## 2. Provision and apply
 
-Run Terraform first, then configure the backup VM and its source export.
+Run Terraform first, then configure the backup VM, its source account, and
+service backup collection.
 
 ```bash
 cd terraform/environments/homelab
@@ -101,7 +103,7 @@ key is restricted to source address `192.168.1.4`, forces exactly
 forwarding, port forwarding, X11 forwarding, user rc files, and arbitrary
 commands or paths. The forced command alone runs through tightly scoped sudo.
 
-Each source exports only its fixed, root-readable files:
+Each source account can provide only its fixed, root-readable service backup:
 
 - required: `/etc/adguardhome/AdGuardHome.yaml`
 - optional: `/var/lib/adguardhome/data/leases.json`
@@ -112,7 +114,8 @@ Each source exports only its fixed, root-readable files:
   quiesced `/opt/vaultwarden/data` tree; `/etc/vaultwarden/secrets.env` is
   excluded
 
-`monitoring-01` does not export Prometheus, Grafana, or Alertmanager
+`monitoring-01` does not provide Prometheus, Grafana, or Alertmanager data as a
+service backup
 application data. Those live data directories remain excluded until a
 consistent snapshot or quiesce design exists.
 

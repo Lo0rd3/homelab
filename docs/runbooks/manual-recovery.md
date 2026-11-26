@@ -5,7 +5,7 @@ Backblaze B2. Use it until the automated recovery workflow is implemented and
 tested.
 
 The Git repository recreates guests and service configuration. B2 restores only
-the service state exported by `backup-01`. This procedure has not yet been
+the service data collected by `backup-01`. This procedure has not yet been
 proved by a full live recovery exercise.
 
 ## Read this first
@@ -353,7 +353,7 @@ ssh debian@monitoring-01 'curl -fsS http://127.0.0.1:9093/-/healthy'
 
 ### Step 9: re-enable and test backups
 
-After every source service is healthy, configure backup exports on all hosts:
+After every source service is healthy, configure service backups on all hosts:
 
 ```bash
 cd /path/to/homelab-repo/ansible

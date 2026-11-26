@@ -85,7 +85,7 @@ them locally rather than committing provider values or secrets.
 
 The repository ignores Terraform state and plans, repository-local Ansible
 collections, TLS/private-key material, and restored backup directories. Keep
-backup exports and restores in protected operator-managed locations, never in
+service backup files and restores in protected operator-managed locations, never in
 this repository.
 
 For validation that does not contact managed infrastructure, follow the

@@ -18,12 +18,13 @@ and 2 yearly snapshots.
 
 The source's root-owned, fixed forced command stops Compose, archives the full
 `/opt/vaultwarden/data` tree, restarts Compose, and requires `/alive` to pass
-before exporting. The full-data archive preserves SQLite with attachments,
+before creating the service backup. The full-data archive preserves SQLite with attachments,
 sends, configuration, and RSA material as one quiesced set.
-`/etc/vaultwarden/secrets.env` is outside that tree and is never exported.
+`/etc/vaultwarden/secrets.env` is outside that tree and is never included in the
+service backup.
 
 `backup-01` can request neither a remote command nor a source path: its pinned
-key is source-address restricted and invokes only the fixed exporter. Never
+key is source-address restricted and invokes only the fixed service backup command. Never
 print or commit database contents, secret files, private keys, archive contents,
 Restic credentials, or SSH material. Do not copy Alpine-only `ROCKET_*` or
 `WEB_VAULT_*` settings into the Compose environment.
